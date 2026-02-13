@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "test": "bun test",
-    "ci": "bun test"
+    "lint": "tsc --noEmit --pretty false",
+    "typecheck": "tsc --noEmit",
+    "ci": "bun run lint && bun run typecheck && bun test"
   },
   "devDependencies": {
     "@types/bun": "^1.2.20",

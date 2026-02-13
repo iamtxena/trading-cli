@@ -1,0 +1,15 @@
+{
+  "name": "trading-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Trade Nexus external CLI constrained to Platform API boundary",
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "ci": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.20",
+    "typescript": "^5.9.2"
+  }
+}

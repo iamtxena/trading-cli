@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose a CLI feature or enhancement.
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What should be added?
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user/problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe expected UX/CLI command behavior.
+    validations:
+      required: true
+  - type: input
+    id: linked_tracking_issue
+    attributes:
+      label: Linked tracking issue
+      description: Parent/child issue URL or number.
+      placeholder: https://github.com/iamtxena/trade-nexus/issues/80
+    validations:
+      required: true

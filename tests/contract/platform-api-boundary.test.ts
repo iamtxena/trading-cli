@@ -29,6 +29,8 @@ describe("Platform API boundary", () => {
     expect(() => assertPlatformApiBaseUrl("https://gateway.lona.agency")).toThrow();
     expect(() => assertPlatformApiBaseUrl("https://live-engine.internal")).toThrow();
     expect(() => assertPlatformApiBaseUrl("https://api.binance.com")).toThrow();
+    expect(() => assertPlatformApiBaseUrl("https://api.trade-nexus.io.evil.com")).toThrow();
+    expect(() => assertPlatformApiBaseUrl("https://evil.com/api.trade-nexus.io")).toThrow();
   });
 
   test("declares provider-host guardrails in CLI source", () => {

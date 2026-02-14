@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "bun test",
-    "lint": "tsc --noEmit --pretty false",
+    "lint": "bun run scripts/boundary-lint.ts",
     "typecheck": "tsc --noEmit",
     "ci": "bun run lint && bun run typecheck && bun test"
   },

@@ -23,6 +23,9 @@ describe("Platform API boundary", () => {
   test("accepts platform API hosts", () => {
     expect(() => assertPlatformApiBaseUrl("https://api.trade-nexus.io")).not.toThrow();
     expect(() => assertPlatformApiBaseUrl("http://localhost:3000")).not.toThrow();
+    expect(() => assertPlatformApiBaseUrl("http://127.0.0.1:3000")).not.toThrow();
+    expect(() => assertPlatformApiBaseUrl("http://0.0.0.0:3000")).not.toThrow();
+    expect(() => assertPlatformApiBaseUrl("http://[::1]:3000")).not.toThrow();
   });
 
   test("rejects direct provider hosts", () => {

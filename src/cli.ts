@@ -7,6 +7,14 @@ const BLOCKED_PROVIDER_HOST_HINTS = [
   "coinbase"
 ] as const;
 
+const ALLOWED_LOCAL_LOOPBACK_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+  "::1",
+  "[::1]"
+]);
+
 export function assertPlatformApiBaseUrl(url: string): void {
   const normalized = url.trim();
 
@@ -28,15 +36,21 @@ export function assertPlatformApiBaseUrl(url: string): void {
   const hostname = parsed.hostname.toLowerCase();
 
   const isPlatformHost =
-    hostname === "api.trade-nexus.io" || hostname === "localhost";
+    hostname === "api.trade-nexus.io" || ALLOWED_LOCAL_LOOPBACK_HOSTS.has(hostname);
 
   const pointsToProvider = BLOCKED_PROVIDER_HOST_HINTS.some((hint) =>
     hostname.includes(hint)
   );
 
-  if (!isPlatformHost || pointsToProvider) {
+  if (pointsToProvider) {
     throw new Error(
       "Boundary violation: CLI must target Platform API only (no direct provider hosts)."
+    );
+  }
+
+  if (!isPlatformHost) {
+    throw new Error(
+      "PLATFORM_API_BASE_URL host must be api.trade-nexus.io or a local loopback host."
     );
   }
 }

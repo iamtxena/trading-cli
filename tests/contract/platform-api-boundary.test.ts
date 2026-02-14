@@ -1,23 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { assertPlatformApiBaseUrl } from "../../src/cli";
+import { collectTypeScriptFiles } from "../../src/typescript-file-collector";
 
 const SRC_ROOT = resolve(process.cwd(), "src");
-
-function collectTypeScriptFiles(dir: string): string[] {
-  return readdirSync(dir).flatMap((entry) => {
-    const fullPath = resolve(dir, entry);
-    const stat = statSync(fullPath);
-
-    if (stat.isDirectory()) {
-      return collectTypeScriptFiles(fullPath);
-    }
-
-    return fullPath.endsWith(".ts") ? [fullPath] : [];
-  });
-}
 
 describe("Platform API boundary", () => {
   test("accepts platform API hosts", () => {

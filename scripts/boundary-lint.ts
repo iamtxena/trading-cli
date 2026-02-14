@@ -1,5 +1,7 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+
+import { collectTypeScriptFiles } from "../src/typescript-file-collector";
 
 const SRC_ROOT = resolve(process.cwd(), "src");
 
@@ -7,19 +9,6 @@ const DIRECT_PROVIDER_IMPORT_PATTERN =
   /(?:import\s+.+?from\s+|import\s*\()\s*["'][^"']*(ccxt|lona|live-engine|binance|alpaca|kraken|coinbase)[^"']*["']/i;
 const DIRECT_PROVIDER_URL_PATTERN =
   /https?:\/\/[^"'`\s]*(binance|alpaca|kraken|coinbase|lona|live-engine)[^"'`\s]*/i;
-
-function collectTypeScriptFiles(dir: string): string[] {
-  return readdirSync(dir).flatMap((entry) => {
-    const filePath = resolve(dir, entry);
-    const fileStat = statSync(filePath);
-
-    if (fileStat.isDirectory()) {
-      return collectTypeScriptFiles(filePath);
-    }
-
-    return filePath.endsWith(".ts") ? [filePath] : [];
-  });
-}
 
 const failures: string[] = [];
 

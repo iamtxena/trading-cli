@@ -2,15 +2,25 @@
 
 External CLI client for Trade Nexus v2.
 
-## Gate0 bootstrap scope
+## Scope
 
-- CLI boundary guardrails only.
-- No direct provider API calls.
-- Platform API contract consumption only.
+- Consumes Platform API only.
+- Enforces no direct provider API usage.
+- Keeps command output automation-friendly.
 
-## Local usage
+## Quick start
 
 ```bash
+bun install
 bun test
 ```
-Trade Nexus external CLI client consuming Platform API SDK
+
+## Governance docs
+
+- `CONTRIBUTING.md`
+- `CODE_OF_CONDUCT.md`
+- `SECURITY.md`
+- `AGENTS.md`
+- `COMMAND_REFERENCE.md`
+- `CONFIGURATION.md`
+- `RELEASE_PROCESS.md`

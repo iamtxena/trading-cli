@@ -1,0 +1,56 @@
+name: Contract change
+description: Propose a Platform API contract change impacting trading-cli.
+title: "[CONTRACT] "
+labels: ["api-contract"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for OpenAPI contract-impacting changes.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the contract change.
+    validations:
+      required: true
+  - type: dropdown
+    id: compatibility
+    attributes:
+      label: Compatibility type
+      options:
+        - Additive (non-breaking)
+        - Breaking
+        - Clarification only
+    validations:
+      required: true
+  - type: textarea
+    id: client_impact
+    attributes:
+      label: Client impact and migration plan
+      description: Describe required CLI updates and rollout plan.
+    validations:
+      required: true
+  - type: input
+    id: architecture_approval_comment
+    attributes:
+      label: Architecture approval comment URL
+      description: Required for breaking changes; otherwise enter N/A.
+      placeholder: https://github.com/iamtxena/trade-nexus/issues/XX#issuecomment-YYYY
+    validations:
+      required: true
+  - type: input
+    id: linked_tracking_issue
+    attributes:
+      label: Linked tracking issue
+      description: Parent/child issue URL or number.
+      placeholder: https://github.com/iamtxena/trade-nexus/issues/76
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation commands and evidence
+      description: Include tests/CI links proving compatibility.
+    validations:
+      required: true

@@ -2,6 +2,10 @@ type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Respo
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
+export type ConsumerRequestOptions = {
+  headers?: Record<string, string>;
+};
+
 function withTrailingSlashTrimmed(value: string): string {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 }
@@ -11,28 +15,42 @@ async function requestJson(
   path: string,
   method: "GET" | "POST",
   body: unknown | null,
-  fetchImpl: FetchLike
+  fetchImpl: FetchLike,
+  options: ConsumerRequestOptions
 ): Promise<unknown> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 
   try {
+    const requestHeaders: Record<string, string> = {
+      "X-Request-Id": "req-cli-consumer-mock-001",
+      ...(options.headers ?? {})
+    };
+    if (body !== null) {
+      requestHeaders["Content-Type"] = "application/json";
+    }
     const response = await fetchImpl(`${withTrailingSlashTrimmed(baseUrl)}${path}`, {
       method,
       signal: controller.signal,
-      headers: {
-        Authorization: "Bearer consumer-test-token",
-        "X-API-Key": "consumer-test-key",
-        "X-Request-Id": "req-cli-consumer-mock-001",
-        ...(body === null ? {} : { "Content-Type": "application/json" })
-      },
+      headers: requestHeaders,
       body: body === null ? undefined : JSON.stringify(body)
     });
-    const payload = (await response.json()) as unknown;
+
+    const rawPayload = await response.text();
     if (!response.ok) {
-      throw new Error(`Platform API request failed (${method} ${path}): HTTP ${response.status}`);
+      const suffix = rawPayload.trim() ? ` body=${rawPayload.slice(0, 256)}` : "";
+      throw new Error(`Platform API request failed (${method} ${path}): HTTP ${response.status}${suffix}`);
     }
-    return payload;
+
+    if (!rawPayload.trim()) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(rawPayload) as unknown;
+    } catch {
+      throw new Error(`Platform API response was not valid JSON (${method} ${path}).`);
+    }
   } finally {
     clearTimeout(timeout);
   }
@@ -55,7 +73,8 @@ function requiredString(payload: Record<string, unknown>, field: string, operati
 
 export async function fetchMarketScanEnvelope(
   baseUrl: string,
-  fetchImpl: FetchLike = fetch
+  fetchImpl: FetchLike = fetch,
+  options: ConsumerRequestOptions = {}
 ): Promise<{ requestId: string; strategyIdeas: unknown[] }> {
   const payload = asRecord(
     await requestJson(
@@ -70,7 +89,8 @@ export async function fetchMarketScanEnvelope(
           maxDrawdownPct: 12
         }
       },
-      fetchImpl
+      fetchImpl,
+      options
     ),
     "market-scan"
   );
@@ -86,7 +106,8 @@ export async function fetchMarketScanEnvelope(
 
 export async function fetchStrategiesEnvelope(
   baseUrl: string,
-  fetchImpl: FetchLike = fetch
+  fetchImpl: FetchLike = fetch,
+  options: ConsumerRequestOptions = {}
 ): Promise<{ requestId: string; items: unknown[] }> {
   const payload = asRecord(
     await requestJson(
@@ -94,7 +115,8 @@ export async function fetchStrategiesEnvelope(
       "/v1/strategies",
       "GET",
       null,
-      fetchImpl
+      fetchImpl,
+      options
     ),
     "list-strategies"
   );
@@ -110,7 +132,8 @@ export async function fetchStrategiesEnvelope(
 
 export async function createConversationSessionEnvelope(
   baseUrl: string,
-  fetchImpl: FetchLike = fetch
+  fetchImpl: FetchLike = fetch,
+  options: ConsumerRequestOptions = {}
 ): Promise<{ requestId: string; sessionId: string }> {
   const payload = asRecord(
     await requestJson(
@@ -124,7 +147,8 @@ export async function createConversationSessionEnvelope(
           source: "trading-cli-consumer-test"
         }
       },
-      fetchImpl
+      fetchImpl,
+      options
     ),
     "create-conversation-session"
   );
@@ -138,7 +162,8 @@ export async function createConversationSessionEnvelope(
 export async function createConversationTurnEnvelope(
   baseUrl: string,
   sessionId: string,
-  fetchImpl: FetchLike = fetch
+  fetchImpl: FetchLike = fetch,
+  options: ConsumerRequestOptions = {}
 ): Promise<{ requestId: string; turnId: string; sessionId: string }> {
   const payload = asRecord(
     await requestJson(
@@ -152,14 +177,27 @@ export async function createConversationTurnEnvelope(
           source: "trading-cli-consumer-test"
         }
       },
-      fetchImpl
+      fetchImpl,
+      options
     ),
     "create-conversation-turn"
   );
+  const responseSessionId = requiredString(payload, "sessionId", "create-conversation-turn");
+  if (responseSessionId !== sessionId) {
+    throw new Error(
+      `create-conversation-turn expected sessionId '${sessionId}' but received '${responseSessionId}'.`
+    );
+  }
   const turn = asRecord(payload.turn, "create-conversation-turn.turn");
+  const turnSessionId = requiredString(turn, "sessionId", "create-conversation-turn.turn");
+  if (turnSessionId !== sessionId) {
+    throw new Error(
+      `create-conversation-turn.turn expected sessionId '${sessionId}' but received '${turnSessionId}'.`
+    );
+  }
   return {
     requestId: requiredString(payload, "requestId", "create-conversation-turn"),
-    sessionId: requiredString(payload, "sessionId", "create-conversation-turn"),
+    sessionId: responseSessionId,
     turnId: requiredString(turn, "id", "create-conversation-turn.turn")
   };
 }

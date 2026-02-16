@@ -87,7 +87,7 @@ export async function fetchMarketScanEnvelope(
 export async function fetchStrategiesEnvelope(
   baseUrl: string,
   fetchImpl: FetchLike = fetch
-): Promise<{ requestId: string; strategies: unknown[] }> {
+): Promise<{ requestId: string; items: unknown[] }> {
   const payload = asRecord(
     await requestJson(
       baseUrl,
@@ -98,13 +98,13 @@ export async function fetchStrategiesEnvelope(
     ),
     "list-strategies"
   );
-  const strategies = payload.strategies;
-  if (!Array.isArray(strategies)) {
-    throw new Error("list-strategies expected array field 'strategies'.");
+  const items = payload.items;
+  if (!Array.isArray(items)) {
+    throw new Error("list-strategies expected array field 'items'.");
   }
   return {
     requestId: requiredString(payload, "requestId", "list-strategies"),
-    strategies
+    items
   };
 }
 

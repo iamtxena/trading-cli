@@ -22,7 +22,7 @@ describe("consumer-driven Platform API mock contracts", () => {
 
     const strategies = await fetchStrategiesEnvelope(BASE_URL);
     expect(typeof strategies.requestId).toBe("string");
-    expect(Array.isArray(strategies.strategies)).toBe(true);
+    expect(Array.isArray(strategies.items)).toBe(true);
   });
 
   mockTest("validates conversation session and turn payload envelopes", async () => {

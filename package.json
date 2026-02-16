@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "bun test",
+    "test:consumer:mock": "bash scripts/run-mock-consumer-contract-tests.sh",
     "lint": "bun run scripts/boundary-lint.ts",
     "typecheck": "tsc --noEmit",
     "ci": "bun run lint && bun run typecheck && bun test"

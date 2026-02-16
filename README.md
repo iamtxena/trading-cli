@@ -15,6 +15,12 @@ bun install
 bun test
 ```
 
+Consumer-driven mock contract suite (Prism/OpenAPI-backed):
+
+```bash
+bun run test:consumer:mock
+```
+
 ## Governance docs
 
 - `CONTRIBUTING.md`

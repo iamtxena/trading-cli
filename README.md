@@ -6,6 +6,7 @@ External CLI client for Trade Nexus v2.
 
 - Consumes Platform API only.
 - Enforces no direct provider API usage.
+- Uses generated SDK for review-run trigger/retrieval.
 - Keeps command output automation-friendly.
 
 ## Quick start
@@ -19,6 +20,13 @@ Consumer-driven mock contract suite (Prism/OpenAPI-backed):
 
 ```bash
 bun run test:consumer:mock
+```
+
+## Review Run Commands
+
+```bash
+trading-cli review-run trigger --help
+trading-cli review-run retrieve --help
 ```
 
 ## Governance docs

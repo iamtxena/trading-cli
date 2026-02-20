@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { run } from "../../src/cli";
 
 describe("CLI smoke", () => {
-  test("executes command path and emits machine-readable output", () => {
+  test("executes non-review-run command path and emits machine-readable output", async () => {
     const originalBaseUrl = process.env.PLATFORM_API_BASE_URL;
     const originalLog = console.log;
 
@@ -15,7 +15,7 @@ describe("CLI smoke", () => {
     };
 
     try {
-      const exitCode = run(["bun", "src/cli.ts", "positions", "list"]);
+      const exitCode = await run(["bun", "src/cli.ts", "positions", "list"]);
       expect(exitCode).toBe(0);
       expect(logs.length).toBe(1);
 

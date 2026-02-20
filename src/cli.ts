@@ -25,6 +25,13 @@ function emitError(payload: unknown): void {
   console.error(JSON.stringify(payload, null, 2));
 }
 
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+  return String(error);
+}
+
 export function assertPlatformApiBaseUrl(url: string): void {
   const normalized = url.trim();
 
@@ -73,7 +80,7 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
   } catch (error) {
     emitError({
       status: "error",
-      message: error instanceof Error ? error.message : String(error),
+      message: toErrorMessage(error),
     });
     return 1;
   }
@@ -107,13 +114,28 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
     });
     return 0;
   } catch (error) {
-    emitError(await formatReviewRunError(error));
+    try {
+      emitError(await formatReviewRunError(error));
+    } catch {
+      emitError({
+        status: "error",
+        message: toErrorMessage(error),
+      });
+    }
     return 1;
   }
 }
 
 if (import.meta.main) {
-  run(process.argv).then((exitCode) => {
-    process.exit(exitCode);
-  });
+  run(process.argv)
+    .then((exitCode) => {
+      process.exit(exitCode);
+    })
+    .catch((error) => {
+      emitError({
+        status: "error",
+        message: toErrorMessage(error),
+      });
+      process.exit(1);
+    });
 }

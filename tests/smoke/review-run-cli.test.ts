@@ -40,7 +40,7 @@ describe("review-run command", () => {
 
     process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
     process.env.PLATFORM_API_BEARER_TOKEN = "token-test-123";
-    process.env.REVIEW_WEB_BASE_URL = "https://app.trade-nexus.io";
+    process.env.REVIEW_WEB_BASE_URL = "https://trade-nexus.lona.agency";
 
     console.log = (value: unknown) => {
       logs.push(String(value));
@@ -152,7 +152,7 @@ describe("review-run command", () => {
     expect(payload.status).toBe("ok");
     expect(payload.runId).toBe("valrun-20260220-0001");
     expect(payload.reviewWeb.path).toBe("/validation?runId=valrun-20260220-0001");
-    expect(payload.reviewWeb.url).toBe("https://app.trade-nexus.io/validation?runId=valrun-20260220-0001");
+    expect(payload.reviewWeb.url).toBe("https://trade-nexus.lona.agency/validation?runId=valrun-20260220-0001");
     expect(payload.renders.length).toBe(1);
     expect(payload.renders[0]?.pending).toBe(true);
   });
@@ -162,7 +162,7 @@ describe("review-run command", () => {
 
     process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
     process.env.PLATFORM_API_BEARER_TOKEN = "token-test-123";
-    process.env.REVIEW_WEB_BASE_URL = "https://review.trade-nexus.io";
+    process.env.REVIEW_WEB_BASE_URL = "https://review-nexus.lona.agency";
 
     console.log = (value: unknown) => {
       logs.push(String(value));
@@ -325,7 +325,7 @@ describe("review-run command", () => {
     expect(payload.summary.pendingDecision).toBe(true);
     expect(payload.reviewWeb.path).toBe("/validation?runId=valrun-20260220-0002");
     expect(payload.reviewWeb.url).toBe(
-      "https://review.trade-nexus.io/validation?runId=valrun-20260220-0002",
+      "https://review-nexus.lona.agency/validation?runId=valrun-20260220-0002",
     );
     expect(payload.render.pending).toBe(true);
   });

@@ -9,7 +9,7 @@ const SRC_ROOT = resolve(process.cwd(), "src");
 
 describe("Platform API boundary", () => {
   test("accepts platform API hosts", () => {
-    expect(() => assertPlatformApiBaseUrl("https://api.trade-nexus.io")).not.toThrow();
+    expect(() => assertPlatformApiBaseUrl("https://api-nexus.lona.agency")).not.toThrow();
     expect(() => assertPlatformApiBaseUrl("http://localhost:3000")).not.toThrow();
     expect(() => assertPlatformApiBaseUrl("http://127.0.0.1:3000")).not.toThrow();
     expect(() => assertPlatformApiBaseUrl("http://0.0.0.0:3000")).not.toThrow();
@@ -20,8 +20,8 @@ describe("Platform API boundary", () => {
     expect(() => assertPlatformApiBaseUrl("https://gateway.lona.agency")).toThrow();
     expect(() => assertPlatformApiBaseUrl("https://live-engine.internal")).toThrow();
     expect(() => assertPlatformApiBaseUrl("https://api.binance.com")).toThrow();
-    expect(() => assertPlatformApiBaseUrl("https://api.trade-nexus.io.evil.com")).toThrow();
-    expect(() => assertPlatformApiBaseUrl("https://evil.com/api.trade-nexus.io")).toThrow();
+    expect(() => assertPlatformApiBaseUrl("https://api-nexus.lona.agency.evil.com")).toThrow();
+    expect(() => assertPlatformApiBaseUrl("https://evil.com/api-nexus.lona.agency")).toThrow();
   });
 
   test("declares provider-host guardrails in CLI source", () => {

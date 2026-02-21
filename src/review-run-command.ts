@@ -17,7 +17,7 @@ import {
   type ValidationReviewRunSummary,
 } from "./generated/trade-nexus-sdk";
 
-const DEFAULT_REVIEW_WEB_BASE_URL = "https://app.trade-nexus.io";
+const DEFAULT_REVIEW_WEB_BASE_URL = "https://trade-nexus.lona.agency";
 const REVIEW_WEB_PATH = "/validation";
 
 const VALID_PROFILES = new Set<string>(Object.values(ValidationProfile));

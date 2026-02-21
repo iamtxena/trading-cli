@@ -337,4 +337,50 @@ describe("bot registration and key lifecycle commands", () => {
     expect(payload.command).toBe("key revoke");
     expect(payload.key.status).toBe("revoked");
   });
+
+  test("register and key subcommand help emit targeted usage", async () => {
+    const logs: string[] = [];
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    const registerExitCode = await run(["bun", "src/cli.ts", "register", "--help"]);
+    expect(registerExitCode).toBe(0);
+    const registerPayload = JSON.parse(logs.at(-1) ?? "{}") as {
+      command: string;
+      usage: string[];
+    };
+    expect(registerPayload.command).toBe("register");
+    expect(registerPayload.usage).toContain(
+      "trading-cli register invite --invite-code <code> --bot-name <name>",
+    );
+
+    const keyExitCode = await run(["bun", "src/cli.ts", "key", "--help"]);
+    expect(keyExitCode).toBe(0);
+    const keyPayload = JSON.parse(logs.at(-1) ?? "{}") as {
+      command: string;
+      usage: string[];
+    };
+    expect(keyPayload.command).toBe("key");
+    expect(keyPayload.usage).toContain("trading-cli key rotate --bot-id <botId> [--reason <text>]");
+  });
+
+  test("missing register/key subcommands return explicit guidance", async () => {
+    const errors: string[] = [];
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    const registerExitCode = await run(["bun", "src/cli.ts", "register"]);
+    expect(registerExitCode).toBe(1);
+    const registerError = JSON.parse(errors.at(-1) ?? "{}") as { message: string };
+    expect(registerError.message).toBe("Unknown register mode. Use 'invite' or 'partner'.");
+
+    const keyExitCode = await run(["bun", "src/cli.ts", "key"]);
+    expect(keyExitCode).toBe(1);
+    const keyError = JSON.parse(errors.at(-1) ?? "{}") as { message: string };
+    expect(keyError.message).toBe("Unknown key action. Use 'rotate' or 'revoke'.");
+  });
 });

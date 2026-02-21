@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
+import { type CommandContext, nonEmpty, parseJsonFile, trimTrailingSlash } from "./command-utils";
 import {
   Configuration,
   ValidationApi,
@@ -12,26 +12,7 @@ import {
   type CreateBotPartnerBootstrapRequest,
 } from "./generated/trade-nexus-sdk";
 
-type CommandContext = {
-  baseUrl: string;
-  env: NodeJS.ProcessEnv;
-  fetchImpl?: typeof fetch;
-  emit: (payload: unknown) => void;
-};
-
 type ParsedValues = ReturnType<typeof parseArgs>["values"];
-
-function trimTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value.slice(0, -1) : value;
-}
-
-function nonEmpty(value: unknown): string | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
 
 function deriveRequestId(seed?: string): string {
   if (seed) {
@@ -45,16 +26,6 @@ function deriveIdempotencyKey(seed?: string): string {
     return seed;
   }
   return `idem-validation-bot-${randomUUID()}`;
-}
-
-function parseJsonFile<T>(path: string, label: string): T {
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as T;
-  } catch (error) {
-    throw new Error(
-      `Unable to parse ${label} at ${path}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
 }
 
 function parseMetadataObject(raw: string, label: string): Record<string, unknown> {
@@ -390,6 +361,32 @@ function emitUsage(context: CommandContext): void {
   });
 }
 
+function emitRegisterUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "register",
+    usage: [
+      "trading-cli register invite --invite-code <code> --bot-name <name>",
+      "trading-cli register partner --partner-key <key> --partner-secret <secret> --owner-email <email> --bot-name <name>",
+      "trading-cli bot register invite --invite-code <code> --bot-name <name>",
+      "trading-cli bot register partner --partner-key <key> --partner-secret <secret> --owner-email <email> --bot-name <name>",
+    ],
+  });
+}
+
+function emitKeyUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "key",
+    usage: [
+      "trading-cli key rotate --bot-id <botId> [--reason <text>]",
+      "trading-cli key revoke --bot-id <botId> --key-id <keyId> [--reason <text>]",
+      "trading-cli bot key rotate --bot-id <botId> [--reason <text>]",
+      "trading-cli bot key revoke --bot-id <botId> --key-id <keyId> [--reason <text>]",
+    ],
+  });
+}
+
 export async function runValidationBotCommand(args: string[], context: CommandContext): Promise<void> {
   const root = args[0];
   if (!root || root === "--help" || root === "-h") {
@@ -399,6 +396,13 @@ export async function runValidationBotCommand(args: string[], context: CommandCo
 
   if (root === "register") {
     const mode = args[1];
+    if (mode === "--help" || mode === "-h") {
+      emitRegisterUsage(context);
+      return;
+    }
+    if (!mode) {
+      throw new Error("Unknown register mode. Use 'invite' or 'partner'.");
+    }
     if (mode === "invite" || mode === "invite-code") {
       await runRegisterInviteCommand(args.slice(2), context);
       return;
@@ -407,11 +411,18 @@ export async function runValidationBotCommand(args: string[], context: CommandCo
       await runRegisterPartnerCommand(args.slice(2), context);
       return;
     }
-    throw new Error(`Unknown register mode '${String(mode)}'. Use 'invite' or 'partner'.`);
+    throw new Error(`Unknown register mode '${mode}'. Use 'invite' or 'partner'.`);
   }
 
   if (root === "key") {
     const action = args[1];
+    if (action === "--help" || action === "-h") {
+      emitKeyUsage(context);
+      return;
+    }
+    if (!action) {
+      throw new Error("Unknown key action. Use 'rotate' or 'revoke'.");
+    }
     if (action === "rotate") {
       await runRotateKeyCommand(args.slice(2), context);
       return;
@@ -420,7 +431,7 @@ export async function runValidationBotCommand(args: string[], context: CommandCo
       await runRevokeKeyCommand(args.slice(2), context);
       return;
     }
-    throw new Error(`Unknown key action '${String(action)}'. Use 'rotate' or 'revoke'.`);
+    throw new Error(`Unknown key action '${action}'. Use 'rotate' or 'revoke'.`);
   }
 
   throw new Error(`Unknown bot command '${root}'. Use 'register' or 'key'.`);

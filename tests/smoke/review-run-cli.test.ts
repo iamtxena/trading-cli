@@ -485,4 +485,28 @@ describe("review-run command", () => {
       "https://trade-nexus.lona.agency/validation?runId=valrun-render-001",
     );
   });
+
+  test("render command enforces single --format value", async () => {
+    const errors: string[] = [];
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-test-123";
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    const exitCode = await run([
+      "bun",
+      "src/cli.ts",
+      "review-run",
+      "render",
+      "--run-id",
+      "valrun-render-002",
+      "--format",
+      "html,pdf",
+    ]);
+
+    expect(exitCode).toBe(1);
+    const payload = JSON.parse(errors.at(-1) ?? "{}") as { message: string };
+    expect(payload.message).toBe("--format accepts a single value (html or pdf).");
+  });
 });

@@ -18,9 +18,9 @@
 
 5. `REVIEW_WEB_BASE_URL` (optional)
    - Base URL used to build stable review-open links in CLI output.
-   - Default: `https://app.trade-nexus.io`.
+   - Default: `https://trade-nexus.lona.agency`.
 
 ## Defaults
 
 - Local Platform API default: `http://localhost:3000`
-- Review web default: `https://app.trade-nexus.io`
+- Review web default: `https://trade-nexus.lona.agency`

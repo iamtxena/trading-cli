@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
+import { type CommandContext, nonEmpty, parseJsonFile, trimTrailingSlash } from "./command-utils";
 import {
   Configuration,
   FetchError,
@@ -25,13 +25,6 @@ const VALID_RENDER_FORMATS = new Set<string>(Object.values(ValidationRenderForma
 const VALID_RUN_STATUSES = new Set<string>(Object.values(ValidationRunStatus));
 const VALID_RUN_DECISIONS = new Set<string>(Object.values(ValidationRunDecision));
 
-type CommandContext = {
-  baseUrl: string;
-  env: NodeJS.ProcessEnv;
-  fetchImpl?: typeof fetch;
-  emit: (payload: unknown) => void;
-};
-
 type ParsedValues = ReturnType<typeof parseArgs>["values"];
 
 type ReviewWebLink = {
@@ -41,23 +34,11 @@ type ReviewWebLink = {
   fallbackUrl: string;
 };
 
-function trimTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value.slice(0, -1) : value;
-}
-
 function withFallbackMessage(value: unknown, fallback: string): string {
   if (typeof value === "string" && value.trim().length > 0) {
     return value;
   }
   return fallback;
-}
-
-function nonEmpty(value: unknown): string | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function parseCsv(value: string | undefined): string[] {
@@ -68,16 +49,6 @@ function parseCsv(value: string | undefined): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
-}
-
-function parseJsonFile<T>(path: string, label: string): T {
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as T;
-  } catch (error) {
-    throw new Error(
-      `Unable to parse ${label} at ${path}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
 }
 
 function parseProfile(value: unknown): ValidationProfile {
@@ -112,13 +83,16 @@ function parseRenderFormats(value: unknown): ValidationRenderFormat[] {
   return [...new Set(formats)] as ValidationRenderFormat[];
 }
 
-function parseRenderFormat(value: unknown): ValidationRenderFormat | undefined {
+function parseRenderFormat(
+  value: unknown,
+  optionName = "--render-format",
+): ValidationRenderFormat | undefined {
   const values = parseRenderFormats(value);
   if (values.length === 0) {
     return undefined;
   }
   if (values.length > 1) {
-    throw new Error("--render-format accepts a single value (html or pdf).");
+    throw new Error(`${optionName} accepts a single value (html or pdf).`);
   }
   return values[0];
 }
@@ -490,6 +464,55 @@ async function runRetrieveCommand(args: string[], context: CommandContext): Prom
   });
 }
 
+async function runRenderCommand(args: string[], context: CommandContext): Promise<void> {
+  const parsed = parseArgs({
+    args,
+    options: {
+      "run-id": { type: "string" },
+      format: { type: "string" },
+      "request-id": { type: "string" },
+      "idempotency-key": { type: "string" },
+    },
+    allowPositionals: false,
+    strict: true,
+  });
+
+  const runId = nonEmpty(parsed.values["run-id"]);
+  if (!runId) {
+    throw new Error("--run-id is required.");
+  }
+
+  const format = parseRenderFormat(parsed.values.format, "--format");
+  if (!format) {
+    throw new Error("--format is required and must be one of: html,pdf.");
+  }
+
+  const { requestId, idempotencyKey } = parseCommonHeaders(parsed.values);
+  const api = createValidationApiClient(context);
+  const reviewWebBaseUrl = resolveReviewWebBaseUrl(context.env);
+
+  const renderResponse = await api.createValidationRunRenderV2({
+    runId,
+    idempotencyKey,
+    xRequestId: requestId,
+    createValidationRenderRequest: {
+      format,
+    },
+  });
+
+  context.emit({
+    status: "ok",
+    command: "review-run render",
+    requestId: renderResponse.requestId,
+    idempotencyKey,
+    runId,
+    format,
+    reviewWeb: buildReviewWebLink(reviewWebBaseUrl, runId),
+    render: renderResponse.render,
+    pending: renderResponse.render.status !== "completed",
+  });
+}
+
 export async function runReviewRunCommand(args: string[], context: CommandContext): Promise<void> {
   const subcommand = args[0];
 
@@ -501,6 +524,7 @@ export async function runReviewRunCommand(args: string[], context: CommandContex
         "trading-cli review-run trigger --strategy-id <id> --requested-indicators <csv> --dataset-ids <csv> --backtest-report-ref <ref> [--render html,pdf]",
         "trading-cli review-run trigger --input <payload.json> [--render html,pdf]",
         "trading-cli review-run retrieve --run-id <runId> [--render-format html|pdf] [--raw]",
+        "trading-cli review-run render --run-id <runId> --format html|pdf",
         "trading-cli review-run retrieve [--status queued|running|completed|failed] [--final-decision pending|pass|conditional_pass|fail] [--limit 25]",
       ],
     });
@@ -517,7 +541,14 @@ export async function runReviewRunCommand(args: string[], context: CommandContex
     return;
   }
 
-  throw new Error(`Unknown review-run subcommand '${subcommand}'. Use 'trigger' or 'retrieve'.`);
+  if (subcommand === "render") {
+    await runRenderCommand(args.slice(1), context);
+    return;
+  }
+
+  throw new Error(
+    `Unknown review-run subcommand '${subcommand}'. Use 'trigger', 'retrieve', or 'render'.`,
+  );
 }
 
 type ErrorEnvelope = {

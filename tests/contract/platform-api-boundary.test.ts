@@ -18,6 +18,7 @@ describe("Platform API boundary", () => {
 
   test("rejects direct provider hosts", () => {
     expect(() => assertPlatformApiBaseUrl("https://gateway.lona.agency")).toThrow();
+    expect(() => assertPlatformApiBaseUrl("https://trade-nexus.lona.agency")).toThrow();
     expect(() => assertPlatformApiBaseUrl("https://live-engine.internal")).toThrow();
     expect(() => assertPlatformApiBaseUrl("https://api.binance.com")).toThrow();
     expect(() => assertPlatformApiBaseUrl("https://api-nexus.lona.agency.evil.com")).toThrow();

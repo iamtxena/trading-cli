@@ -329,4 +329,184 @@ describe("review-run command", () => {
     );
     expect(payload.render.pending).toBe(true);
   });
+
+  test("validation run alias triggers review-run workflow", async () => {
+    const logs: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-test-123";
+
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+
+      if (url.pathname === "/v2/validation-runs" && method === "POST") {
+        return jsonResponse(
+          {
+            requestId: "req-validation-run-alias-001",
+            run: {
+              id: "valrun-alias-001",
+              status: "queued",
+              profile: "STANDARD",
+              schemaVersion: "validation-run.v1",
+              finalDecision: "pending",
+              createdAt: "2026-02-21T19:10:00Z",
+              updatedAt: "2026-02-21T19:10:00Z",
+            },
+          },
+          202,
+        );
+      }
+
+      return jsonResponse(
+        {
+          error: {
+            code: "not_found",
+            message: `Unexpected request: ${method} ${url.pathname}`,
+          },
+          requestId: "req-test-unexpected",
+        },
+        404,
+      );
+    }) as typeof fetch;
+
+    const exitCode = await run(
+      [
+        "bun",
+        "src/cli.ts",
+        "validation",
+        "run",
+        "trigger",
+        "--strategy-id",
+        "strat-001",
+        "--requested-indicators",
+        "ema",
+        "--dataset-ids",
+        "dataset-btc-1h-2025",
+        "--backtest-report-ref",
+        "blob://validation/candidate/backtest.json",
+      ],
+      fetchMock,
+    );
+
+    expect(exitCode).toBe(0);
+
+    const payload = JSON.parse(logs.at(-1) ?? "{}") as {
+      command: string;
+      runId: string;
+    };
+    expect(payload.command).toBe("review-run trigger");
+    expect(payload.runId).toBe("valrun-alias-001");
+  });
+
+  test("validation run render queues derived html/pdf output from canonical JSON", async () => {
+    const logs: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-test-123";
+    process.env.REVIEW_WEB_BASE_URL = "https://trade-nexus.lona.agency";
+
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+
+      if (url.pathname === "/v2/validation-runs/valrun-render-001/render" && method === "POST") {
+        expect(body).toEqual({ format: "pdf" });
+        return jsonResponse(
+          {
+            requestId: "req-validation-run-render-001",
+            render: {
+              runId: "valrun-render-001",
+              format: "pdf",
+              status: "queued",
+              artifactRef: null,
+              downloadUrl: null,
+              checksumSha256: null,
+              expiresAt: null,
+              requestedAt: "2026-02-21T19:20:00Z",
+              updatedAt: "2026-02-21T19:20:00Z",
+            },
+          },
+          202,
+        );
+      }
+
+      return jsonResponse(
+        {
+          error: {
+            code: "not_found",
+            message: `Unexpected request: ${method} ${url.pathname}`,
+          },
+          requestId: "req-test-unexpected",
+        },
+        404,
+      );
+    }) as typeof fetch;
+
+    const exitCode = await run(
+      [
+        "bun",
+        "src/cli.ts",
+        "validation",
+        "run",
+        "render",
+        "--run-id",
+        "valrun-render-001",
+        "--format",
+        "pdf",
+      ],
+      fetchMock,
+    );
+
+    expect(exitCode).toBe(0);
+
+    const payload = JSON.parse(logs.at(-1) ?? "{}") as {
+      command: string;
+      runId: string;
+      format: string;
+      pending: boolean;
+      reviewWeb: { url: string };
+    };
+
+    expect(payload.command).toBe("review-run render");
+    expect(payload.runId).toBe("valrun-render-001");
+    expect(payload.format).toBe("pdf");
+    expect(payload.pending).toBe(true);
+    expect(payload.reviewWeb.url).toBe(
+      "https://trade-nexus.lona.agency/validation?runId=valrun-render-001",
+    );
+  });
+
+  test("render command enforces single --format value", async () => {
+    const errors: string[] = [];
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-test-123";
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    const exitCode = await run([
+      "bun",
+      "src/cli.ts",
+      "review-run",
+      "render",
+      "--run-id",
+      "valrun-render-002",
+      "--format",
+      "html,pdf",
+    ]);
+
+    expect(exitCode).toBe(1);
+    const payload = JSON.parse(errors.at(-1) ?? "{}") as { message: string };
+    expect(payload.message).toBe("--format accepts a single value (html or pdf).");
+  });
 });

@@ -139,12 +139,13 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       return 0;
     }
 
-    emitJson({
-      status: "ok",
+    emitError({
+      status: "error",
+      message: `Unknown command '${args[0]}'. Use 'review-run', 'validation run', 'register', 'key', or 'bot'.`,
       command: args,
       target: baseUrl,
     });
-    return 0;
+    return 1;
   } catch (error) {
     try {
       emitError(await formatReviewRunError(error));

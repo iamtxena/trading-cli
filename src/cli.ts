@@ -1,4 +1,7 @@
+#!/usr/bin/env node
+
 import { formatReviewRunError, runReviewRunCommand } from "./review-run-command";
+import { runValidationBotCommand } from "./validation-bot-command";
 
 const BLOCKED_PROVIDER_HOST_HINTS = [
   "lona",
@@ -92,26 +95,54 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       status: "ok",
       message: "trading-cli ready",
       target: baseUrl,
-      commands: ["review-run trigger", "review-run retrieve"],
-    });
-    return 0;
-  }
-
-  if (args[0] !== "review-run") {
-    emitJson({
-      status: "ok",
-      command: args,
-      target: baseUrl,
+      commands: [
+        "review-run trigger",
+        "review-run retrieve",
+        "review-run render",
+        "validation run trigger",
+        "validation run retrieve",
+        "validation run render",
+        "register invite",
+        "register partner",
+        "key rotate",
+        "key revoke",
+      ],
     });
     return 0;
   }
 
   try {
-    await runReviewRunCommand(args.slice(1), {
+    const context = {
       baseUrl,
       env: process.env,
       fetchImpl,
       emit: emitJson,
+    };
+
+    if (args[0] === "review-run") {
+      await runReviewRunCommand(args.slice(1), context);
+      return 0;
+    }
+
+    if (args[0] === "validation" && args[1] === "run") {
+      await runReviewRunCommand(args.slice(2), context);
+      return 0;
+    }
+
+    if (args[0] === "register" || args[0] === "key") {
+      await runValidationBotCommand(args, context);
+      return 0;
+    }
+
+    if (args[0] === "bot") {
+      await runValidationBotCommand(args.slice(1), context);
+      return 0;
+    }
+
+    emitJson({
+      status: "ok",
+      command: args,
+      target: baseUrl,
     });
     return 0;
   } catch (error) {

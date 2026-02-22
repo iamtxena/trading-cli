@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 export type CommandContext = {
@@ -27,4 +28,18 @@ export function parseJsonFile<T>(path: string, label: string): T {
       `Unable to parse ${label} at ${path}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+}
+
+export function deriveRequestId(prefix: string, seed?: string): string {
+  if (seed) {
+    return seed;
+  }
+  return `${prefix}-${Date.now()}`;
+}
+
+export function deriveIdempotencyKey(prefix: string, seed?: string): string {
+  if (seed) {
+    return seed;
+  }
+  return `${prefix}-${randomUUID()}`;
 }

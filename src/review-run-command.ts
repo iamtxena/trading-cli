@@ -1,7 +1,13 @@
-import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 
-import { type CommandContext, nonEmpty, parseJsonFile, trimTrailingSlash } from "./command-utils";
+import {
+  type CommandContext,
+  deriveIdempotencyKey,
+  deriveRequestId,
+  nonEmpty,
+  parseJsonFile,
+  trimTrailingSlash,
+} from "./command-utils";
 import { createValidationApiClient } from "./validation-api-client";
 import {
   FetchError,
@@ -18,6 +24,8 @@ import {
 
 const DEFAULT_REVIEW_WEB_BASE_URL = "https://trade-nexus.lona.agency";
 const REVIEW_WEB_PATH = "/validation";
+const REVIEW_RUN_REQUEST_ID_PREFIX = "req-review-run";
+const REVIEW_RUN_IDEMPOTENCY_KEY_PREFIX = "idem-review-run";
 
 const VALID_PROFILES = new Set<string>(Object.values(ValidationProfile));
 const VALID_RENDER_FORMATS = new Set<string>(Object.values(ValidationRenderFormat));
@@ -190,20 +198,6 @@ function buildCreateValidationRunRequest(values: ParsedValues): CreateValidation
   };
 }
 
-function deriveRequestId(seed?: string): string {
-  if (seed) {
-    return seed;
-  }
-  return `req-review-run-${Date.now()}`;
-}
-
-function deriveIdempotencyKey(seed?: string): string {
-  if (seed) {
-    return seed;
-  }
-  return `idem-review-run-${randomUUID()}`;
-}
-
 function buildReviewWebLink(reviewWebBaseUrl: string, runId: string): ReviewWebLink {
   const normalizedBase = trimTrailingSlash(reviewWebBaseUrl);
   const path = `${REVIEW_WEB_PATH}?runId=${encodeURIComponent(runId)}`;
@@ -273,8 +267,11 @@ function parseCommonHeaders(values: ParsedValues): {
   idempotencyKey: string;
 } {
   return {
-    requestId: deriveRequestId(nonEmpty(values["request-id"])),
-    idempotencyKey: deriveIdempotencyKey(nonEmpty(values["idempotency-key"])),
+    requestId: deriveRequestId(REVIEW_RUN_REQUEST_ID_PREFIX, nonEmpty(values["request-id"])),
+    idempotencyKey: deriveIdempotencyKey(
+      REVIEW_RUN_IDEMPOTENCY_KEY_PREFIX,
+      nonEmpty(values["idempotency-key"]),
+    ),
   };
 }
 
@@ -368,7 +365,10 @@ async function runRetrieveCommand(args: string[], context: CommandContext): Prom
   });
 
   const runId = nonEmpty(parsed.values["run-id"]);
-  const requestId = deriveRequestId(nonEmpty(parsed.values["request-id"]));
+  const requestId = deriveRequestId(
+    REVIEW_RUN_REQUEST_ID_PREFIX,
+    nonEmpty(parsed.values["request-id"]),
+  );
   const api = createValidationApiClient(context);
   const reviewWebBaseUrl = resolveReviewWebBaseUrl(context.env);
 

@@ -1,7 +1,12 @@
-import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 
-import { type CommandContext, nonEmpty, parseJsonFile } from "./command-utils";
+import {
+  type CommandContext,
+  deriveIdempotencyKey,
+  deriveRequestId,
+  nonEmpty,
+  parseJsonFile,
+} from "./command-utils";
 import { createValidationApiClient } from "./validation-api-client";
 import {
   type Bot,
@@ -12,20 +17,8 @@ import {
 } from "./generated/trade-nexus-sdk";
 
 type ParsedValues = ReturnType<typeof parseArgs>["values"];
-
-function deriveRequestId(seed?: string): string {
-  if (seed) {
-    return seed;
-  }
-  return `req-validation-bot-${Date.now()}`;
-}
-
-function deriveIdempotencyKey(seed?: string): string {
-  if (seed) {
-    return seed;
-  }
-  return `idem-validation-bot-${randomUUID()}`;
-}
+const VALIDATION_BOT_REQUEST_ID_PREFIX = "req-validation-bot";
+const VALIDATION_BOT_IDEMPOTENCY_KEY_PREFIX = "idem-validation-bot";
 
 function parseMetadataObject(raw: string, label: string): Record<string, unknown> {
   let parsed: unknown;
@@ -160,8 +153,14 @@ async function runRegisterInviteCommand(args: string[], context: CommandContext)
   });
 
   const payload = parseInviteRegistrationPayload(parsed.values);
-  const requestId = deriveRequestId(nonEmpty(parsed.values["request-id"]));
-  const idempotencyKey = deriveIdempotencyKey(nonEmpty(parsed.values["idempotency-key"]));
+  const requestId = deriveRequestId(
+    VALIDATION_BOT_REQUEST_ID_PREFIX,
+    nonEmpty(parsed.values["request-id"]),
+  );
+  const idempotencyKey = deriveIdempotencyKey(
+    VALIDATION_BOT_IDEMPOTENCY_KEY_PREFIX,
+    nonEmpty(parsed.values["idempotency-key"]),
+  );
   const api = createValidationApiClient(context, { requireAuth: false });
 
   const response = await api.registerValidationBotInviteCodeV2({
@@ -204,8 +203,14 @@ async function runRegisterPartnerCommand(args: string[], context: CommandContext
   });
 
   const payload = parsePartnerBootstrapPayload(parsed.values);
-  const requestId = deriveRequestId(nonEmpty(parsed.values["request-id"]));
-  const idempotencyKey = deriveIdempotencyKey(nonEmpty(parsed.values["idempotency-key"]));
+  const requestId = deriveRequestId(
+    VALIDATION_BOT_REQUEST_ID_PREFIX,
+    nonEmpty(parsed.values["request-id"]),
+  );
+  const idempotencyKey = deriveIdempotencyKey(
+    VALIDATION_BOT_IDEMPOTENCY_KEY_PREFIX,
+    nonEmpty(parsed.values["idempotency-key"]),
+  );
   const api = createValidationApiClient(context, { requireAuth: false });
 
   const response = await api.registerValidationBotPartnerBootstrapV2({
@@ -247,8 +252,14 @@ async function runRotateKeyCommand(args: string[], context: CommandContext): Pro
     throw new Error("--bot-id is required.");
   }
 
-  const requestId = deriveRequestId(nonEmpty(parsed.values["request-id"]));
-  const idempotencyKey = deriveIdempotencyKey(nonEmpty(parsed.values["idempotency-key"]));
+  const requestId = deriveRequestId(
+    VALIDATION_BOT_REQUEST_ID_PREFIX,
+    nonEmpty(parsed.values["request-id"]),
+  );
+  const idempotencyKey = deriveIdempotencyKey(
+    VALIDATION_BOT_IDEMPOTENCY_KEY_PREFIX,
+    nonEmpty(parsed.values["idempotency-key"]),
+  );
   const reason = nonEmpty(parsed.values.reason);
   const api = createValidationApiClient(context);
 
@@ -297,8 +308,14 @@ async function runRevokeKeyCommand(args: string[], context: CommandContext): Pro
     throw new Error("--key-id is required.");
   }
 
-  const requestId = deriveRequestId(nonEmpty(parsed.values["request-id"]));
-  const idempotencyKey = deriveIdempotencyKey(nonEmpty(parsed.values["idempotency-key"]));
+  const requestId = deriveRequestId(
+    VALIDATION_BOT_REQUEST_ID_PREFIX,
+    nonEmpty(parsed.values["request-id"]),
+  );
+  const idempotencyKey = deriveIdempotencyKey(
+    VALIDATION_BOT_IDEMPOTENCY_KEY_PREFIX,
+    nonEmpty(parsed.values["idempotency-key"]),
+  );
   const reason = nonEmpty(parsed.values.reason);
   const api = createValidationApiClient(context);
 

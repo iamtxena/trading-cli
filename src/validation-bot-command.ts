@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 
-import { type CommandContext, nonEmpty, parseJsonFile, trimTrailingSlash } from "./command-utils";
+import { type CommandContext, nonEmpty, parseJsonFile } from "./command-utils";
+import { createValidationApiClient } from "./validation-api-client";
 import {
-  Configuration,
-  ValidationApi,
   type Bot,
   type BotKeyMetadata,
   type BotRegistration,
@@ -61,29 +60,6 @@ function parseOptionalMetadata(values: ParsedValues): Record<string, unknown> | 
   }
 
   return undefined;
-}
-
-function resolveAuth(env: NodeJS.ProcessEnv): { accessToken?: string; apiKey?: string } {
-  const accessToken = nonEmpty(env.PLATFORM_API_BEARER_TOKEN) ?? nonEmpty(env.PLATFORM_API_TOKEN);
-  const apiKey = nonEmpty(env.PLATFORM_API_KEY);
-  return { accessToken, apiKey };
-}
-
-function createValidationApiClient(context: CommandContext, requireAuth: boolean): ValidationApi {
-  const auth = resolveAuth(context.env);
-  if (requireAuth && !auth.accessToken && !auth.apiKey) {
-    throw new Error(
-      "Authentication required: set PLATFORM_API_BEARER_TOKEN (preferred) or PLATFORM_API_KEY.",
-    );
-  }
-
-  const configuration = new Configuration({
-    basePath: trimTrailingSlash(context.baseUrl),
-    fetchApi: context.fetchImpl,
-    accessToken: auth.accessToken,
-    apiKey: auth.apiKey,
-  });
-  return new ValidationApi(configuration);
 }
 
 function parseInviteRegistrationPayload(values: ParsedValues): CreateBotInviteRegistrationRequest {
@@ -186,7 +162,7 @@ async function runRegisterInviteCommand(args: string[], context: CommandContext)
   const payload = parseInviteRegistrationPayload(parsed.values);
   const requestId = deriveRequestId(nonEmpty(parsed.values["request-id"]));
   const idempotencyKey = deriveIdempotencyKey(nonEmpty(parsed.values["idempotency-key"]));
-  const api = createValidationApiClient(context, false);
+  const api = createValidationApiClient(context, { requireAuth: false });
 
   const response = await api.registerValidationBotInviteCodeV2({
     xRequestId: requestId,
@@ -230,7 +206,7 @@ async function runRegisterPartnerCommand(args: string[], context: CommandContext
   const payload = parsePartnerBootstrapPayload(parsed.values);
   const requestId = deriveRequestId(nonEmpty(parsed.values["request-id"]));
   const idempotencyKey = deriveIdempotencyKey(nonEmpty(parsed.values["idempotency-key"]));
-  const api = createValidationApiClient(context, false);
+  const api = createValidationApiClient(context, { requireAuth: false });
 
   const response = await api.registerValidationBotPartnerBootstrapV2({
     xRequestId: requestId,
@@ -274,7 +250,7 @@ async function runRotateKeyCommand(args: string[], context: CommandContext): Pro
   const requestId = deriveRequestId(nonEmpty(parsed.values["request-id"]));
   const idempotencyKey = deriveIdempotencyKey(nonEmpty(parsed.values["idempotency-key"]));
   const reason = nonEmpty(parsed.values.reason);
-  const api = createValidationApiClient(context, true);
+  const api = createValidationApiClient(context);
 
   const response = await api.rotateValidationBotKeyV2({
     botId,
@@ -324,7 +300,7 @@ async function runRevokeKeyCommand(args: string[], context: CommandContext): Pro
   const requestId = deriveRequestId(nonEmpty(parsed.values["request-id"]));
   const idempotencyKey = deriveIdempotencyKey(nonEmpty(parsed.values["idempotency-key"]));
   const reason = nonEmpty(parsed.values.reason);
-  const api = createValidationApiClient(context, true);
+  const api = createValidationApiClient(context);
 
   const response = await api.revokeValidationBotKeyV2({
     botId,

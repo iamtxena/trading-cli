@@ -2,12 +2,11 @@ import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 
 import { type CommandContext, nonEmpty, parseJsonFile, trimTrailingSlash } from "./command-utils";
+import { createValidationApiClient } from "./validation-api-client";
 import {
-  Configuration,
   FetchError,
   RequiredError,
   ResponseError,
-  ValidationApi,
   ValidationProfile,
   ValidationRenderFormat,
   ValidationRunDecision,
@@ -234,27 +233,6 @@ function resolveReviewWebBaseUrl(env: NodeJS.ProcessEnv): string {
   }
 
   return trimTrailingSlash(parsed.toString());
-}
-
-function createValidationApiClient(context: CommandContext): ValidationApi {
-  const accessToken =
-    nonEmpty(context.env.PLATFORM_API_BEARER_TOKEN) ?? nonEmpty(context.env.PLATFORM_API_TOKEN);
-  const apiKey = nonEmpty(context.env.PLATFORM_API_KEY);
-
-  if (!accessToken && !apiKey) {
-    throw new Error(
-      "Authentication required: set PLATFORM_API_BEARER_TOKEN (preferred) or PLATFORM_API_KEY.",
-    );
-  }
-
-  const configuration = new Configuration({
-    basePath: trimTrailingSlash(context.baseUrl),
-    fetchApi: context.fetchImpl,
-    accessToken,
-    apiKey,
-  });
-
-  return new ValidationApi(configuration);
 }
 
 function summarizeReviewArtifact(response: ValidationReviewRunDetailResponse) {

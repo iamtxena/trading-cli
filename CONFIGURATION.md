@@ -15,6 +15,7 @@
 
 4. `PLATFORM_API_KEY` (optional auth)
    - API key forwarded by generated SDK as `X-API-Key`.
+   - Used by authenticated operations such as review runs and bot key rotate/revoke.
 
 5. `REVIEW_WEB_BASE_URL` (optional)
    - Base URL used to build stable review-open links in CLI output.
@@ -24,3 +25,16 @@
 
 - Local Platform API default: `http://localhost:3000`
 - Review web default: `https://trade-nexus.lona.agency`
+
+## Command Inputs and Secret Handling
+
+1. Registration commands support direct flags or JSON payloads:
+   - `--input <file.json>` for full request payloads.
+   - `--metadata-json <json>` or `--metadata-file <file.json>` for metadata objects.
+
+2. `register partner` requires `--partner-secret` in payload/flags.
+   - Partner secret is sent to Platform API only.
+   - CLI never echoes partner secret in output.
+
+3. API keys returned by `register ...` and `key rotate` are emitted once in JSON response.
+   - Store immediately; raw key is not retrievable afterwards.

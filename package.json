@@ -1,10 +1,33 @@
 {
   "name": "trading-cli",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "description": "Trade Nexus external CLI constrained to Platform API boundary",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iamtxena/trading-cli.git"
+  },
+  "homepage": "https://github.com/iamtxena/trading-cli#readme",
+  "bugs": {
+    "url": "https://github.com/iamtxena/trading-cli/issues"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "COMMAND_REFERENCE.md",
+    "CONFIGURATION.md"
+  ],
+  "bin": {
+    "trading-cli": "dist/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "scripts": {
+    "build": "bun build ./src/cli.ts --target=node --format=esm --outfile=dist/cli.js --sourcemap=none",
+    "prepack": "bun run build",
     "test": "bun test",
     "test:consumer:mock": "bash scripts/run-mock-consumer-contract-tests.sh",
     "lint": "bun run scripts/boundary-lint.ts",
@@ -12,7 +35,7 @@
     "ci": "bun run lint && bun run typecheck && bun test"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.20",
+    "@types/bun": "1.2.20",
     "typescript": "^5.9.2"
   }
 }

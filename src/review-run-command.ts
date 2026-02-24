@@ -232,14 +232,16 @@ function resolveReviewWebBaseUrl(env: NodeJS.ProcessEnv): string {
 function summarizeReviewArtifact(response: ValidationReviewRunDetailResponse) {
   const artifact = response.artifact;
   const run = artifact.run;
+  const persistedArtifact = artifact.artifact;
+  const traderReview = persistedArtifact.traderReview;
   return {
     runId: run.id,
     status: run.status,
     profile: run.profile,
-    finalDecision: run.finalDecision,
-    traderReviewStatus: artifact.artifact.traderReview.status,
-    commentCount: artifact.comments.length,
-    pendingDecision: artifact.decision == null,
+    finalDecision: persistedArtifact.finalDecision,
+    traderReviewStatus: traderReview.status,
+    commentCount: traderReview.comments.length,
+    pendingDecision: traderReview.status === "requested",
     createdAt: run.createdAt.toISOString(),
     updatedAt: run.updatedAt.toISOString(),
     schemaVersion: artifact.schemaVersion,

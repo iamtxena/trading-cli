@@ -307,7 +307,9 @@ describe("review-run command", () => {
       status: string;
       runId: string;
       summary: {
+        finalDecision: string;
         traderReviewStatus: string;
+        commentCount: number;
         pendingDecision: boolean;
       };
       reviewWeb: {
@@ -321,13 +323,173 @@ describe("review-run command", () => {
 
     expect(payload.status).toBe("ok");
     expect(payload.runId).toBe("valrun-20260220-0002");
+    expect(payload.summary.finalDecision).toBe("conditional_pass");
     expect(payload.summary.traderReviewStatus).toBe("requested");
+    expect(payload.summary.commentCount).toBe(0);
     expect(payload.summary.pendingDecision).toBe(true);
     expect(payload.reviewWeb.path).toBe("/validation?runId=valrun-20260220-0002");
     expect(payload.reviewWeb.url).toBe(
       "https://review-nexus.lona.agency/validation?runId=valrun-20260220-0002",
     );
     expect(payload.render.pending).toBe(true);
+  });
+
+  test("retrieve projects reviewed run summary from persisted artifact state", async () => {
+    const logs: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-test-123";
+    process.env.REVIEW_WEB_BASE_URL = "https://review-nexus.lona.agency";
+
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+
+      if (url.pathname === "/v2/validation-review/runs/valrun-reviewed-0003" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-validation-review-run-003",
+          artifact: {
+            schemaVersion: "validation-review.v1",
+            run: {
+              id: "valrun-reviewed-0003",
+              status: "completed",
+              profile: "STANDARD",
+              schemaVersion: "validation-run.v1",
+              finalDecision: "conditional_pass",
+              createdAt: "2026-02-20T18:21:00Z",
+              updatedAt: "2026-02-20T18:27:00Z",
+            },
+            artifact: {
+              schemaVersion: "validation-run.v1",
+              runId: "valrun-reviewed-0003",
+              createdAt: "2026-02-20T18:21:00Z",
+              requestId: "req-validation-run-003",
+              tenantId: "tenant-001",
+              userId: "user-001",
+              strategyRef: {
+                strategyId: "strat-003",
+                provider: "lona",
+                providerRefId: "lona-strategy-003",
+              },
+              inputs: {
+                prompt: "Build breakout strategy",
+                requestedIndicators: ["ema"],
+                datasetIds: ["dataset-btc-1h-2025"],
+                backtestReportRef: "blob://validation/valrun-reviewed-0003/backtest.json",
+              },
+              outputs: {
+                strategyCodeRef: "blob://validation/valrun-reviewed-0003/strategy.py",
+                backtestReportRef: "blob://validation/valrun-reviewed-0003/backtest.json",
+                tradesRef: "blob://validation/valrun-reviewed-0003/trades.json",
+                executionLogsRef: "blob://validation/valrun-reviewed-0003/execution.log",
+                chartPayloadRef: "blob://validation/valrun-reviewed-0003/chart.json",
+              },
+              deterministicChecks: {
+                indicatorFidelity: {
+                  status: "pass",
+                  missingIndicators: [],
+                },
+                tradeCoherence: {
+                  status: "pass",
+                  violations: [],
+                },
+                metricConsistency: {
+                  status: "pass",
+                  driftPct: 0.1,
+                },
+              },
+              agentReview: {
+                status: "pass",
+                summary: "No issues",
+                findings: [],
+              },
+              traderReview: {
+                required: true,
+                status: "approved",
+                comments: ["Looks good after risk check", "Approve for release candidate"],
+              },
+              policy: {
+                profile: "STANDARD",
+                blockMergeOnFail: true,
+                blockReleaseOnFail: true,
+                blockMergeOnAgentFail: true,
+                blockReleaseOnAgentFail: false,
+                requireTraderReview: true,
+                hardFailOnMissingIndicators: true,
+                failClosedOnEvidenceUnavailable: true,
+              },
+              finalDecision: "pass",
+            },
+            comments: [],
+            decision: null,
+            renders: [],
+          },
+        });
+      }
+
+      return jsonResponse(
+        {
+          error: {
+            code: "not_found",
+            message: `Unexpected request: ${method} ${url.pathname}`,
+          },
+          requestId: "req-test-unexpected",
+        },
+        404,
+      );
+    }) as typeof fetch;
+
+    const exitCode = await run(
+      [
+        "bun",
+        "src/cli.ts",
+        "review-run",
+        "retrieve",
+        "--run-id",
+        "valrun-reviewed-0003",
+        "--raw",
+      ],
+      fetchMock,
+    );
+
+    expect(exitCode).toBe(0);
+
+    const payload = JSON.parse(logs.at(-1) ?? "{}") as {
+      status: string;
+      runId: string;
+      summary: {
+        finalDecision: string;
+        traderReviewStatus: string;
+        commentCount: number;
+        pendingDecision: boolean;
+      };
+      artifact: {
+        artifact: {
+          finalDecision: string;
+          traderReview: {
+            status: string;
+            comments: string[];
+          };
+        };
+      };
+    };
+
+    expect(payload.status).toBe("ok");
+    expect(payload.runId).toBe("valrun-reviewed-0003");
+    expect(payload.summary.finalDecision).toBe("pass");
+    expect(payload.summary.traderReviewStatus).toBe("approved");
+    expect(payload.summary.commentCount).toBe(2);
+    expect(payload.summary.pendingDecision).toBe(false);
+    expect(payload.summary.finalDecision).toBe(payload.artifact.artifact.finalDecision);
+    expect(payload.summary.traderReviewStatus).toBe(payload.artifact.artifact.traderReview.status);
+    expect(payload.summary.commentCount).toBe(payload.artifact.artifact.traderReview.comments.length);
+    expect(payload.summary.pendingDecision).toBe(
+      payload.artifact.artifact.traderReview.status === "requested",
+    );
   });
 
   test("validation run alias triggers review-run workflow", async () => {

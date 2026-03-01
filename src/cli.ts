@@ -2,6 +2,7 @@
 
 import { formatReviewRunError, runReviewRunCommand } from "./review-run-command";
 import { runValidationBotCommand } from "./validation-bot-command";
+import { runCoreCommand } from "./core-command";
 
 const BLOCKED_PROVIDER_HOST_HINTS = [
   "lona",
@@ -106,6 +107,12 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
         "register partner",
         "key rotate",
         "key revoke",
+        "research scan",
+        "strategy create|get|list|update",
+        "backtest create|get",
+        "deploy create|get|list|stop",
+        "portfolio list|get",
+        "order create|get|list|cancel",
       ],
     });
     return 0;
@@ -139,9 +146,24 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       return 0;
     }
 
+    if (
+      args[0] === "research" ||
+      args[0] === "strategy" ||
+      args[0] === "backtest" ||
+      args[0] === "deploy" ||
+      args[0] === "portfolio" ||
+      args[0] === "order"
+    ) {
+      await runCoreCommand(args, context);
+      return 0;
+    }
+
     emitError({
       status: "error",
-      message: `Unknown command '${args[0]}'. Use 'review-run', 'validation run', 'register', 'key', or 'bot'.`,
+      message:
+        `Unknown command '${args[0]}'. Use 'review-run', 'validation run', ` +
+        "'register', 'key', 'bot', 'research', 'strategy', 'backtest', " +
+        "'deploy', 'portfolio', or 'order'.",
       command: args,
       target: baseUrl,
     });

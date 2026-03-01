@@ -1,0 +1,367 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, describe, expect, test } from "bun:test";
+
+import { run } from "../../src/cli";
+
+type RecordedRequest = {
+  path: string;
+  method: string;
+  headers: Headers;
+  body?: unknown;
+};
+
+const ORIGINAL_FETCH = globalThis.fetch;
+const ORIGINAL_LOG = console.log;
+const ORIGINAL_ERROR = console.error;
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+afterEach(() => {
+  globalThis.fetch = ORIGINAL_FETCH;
+  console.log = ORIGINAL_LOG;
+  console.error = ORIGINAL_ERROR;
+  delete process.env.PLATFORM_API_BASE_URL;
+  delete process.env.PLATFORM_API_BEARER_TOKEN;
+  delete process.env.PLATFORM_API_TOKEN;
+  delete process.env.PLATFORM_API_KEY;
+});
+
+describe("core command groups", () => {
+  test("research/strategy/backtest/deploy/portfolio/order map to canonical endpoints", async () => {
+    const requests: RecordedRequest[] = [];
+    const logs: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-core-001";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+      const headers = new Headers(init?.headers);
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      requests.push({ path: url.pathname, method, headers, body });
+
+      if (url.pathname === "/v2/research/market-scan" && method === "POST") {
+        return jsonResponse({
+          requestId: "req-research-001",
+          regimeSummary: "risk-on",
+          strategyIdeas: [
+            {
+              name: "Breakout",
+              assetClass: "crypto",
+              description: "Momentum breakout",
+            },
+          ],
+          knowledgeEvidence: [],
+          dataContextSummary: "none",
+        });
+      }
+
+      if (url.pathname === "/v1/strategies" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-strategy-list-001",
+          items: [
+            {
+              id: "strat-001",
+              name: "Breakout",
+              status: "tested",
+              provider: "lona",
+              providerRefId: "provider-001",
+              tags: ["momentum"],
+              createdAt: "2026-03-01T10:00:00Z",
+              updatedAt: "2026-03-01T10:00:00Z",
+            },
+          ],
+          nextCursor: null,
+        });
+      }
+
+      if (url.pathname === "/v1/backtests/backtest-001" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-backtest-get-001",
+          backtest: {
+            id: "backtest-001",
+            strategyId: "strat-001",
+            status: "completed",
+            startedAt: "2026-02-01T00:00:00Z",
+            completedAt: "2026-02-02T00:00:00Z",
+            metrics: { pnlPct: 3.2 },
+            error: null,
+            createdAt: "2026-02-01T00:00:00Z",
+          },
+        });
+      }
+
+      if (url.pathname === "/v1/deployments" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-deploy-list-001",
+          items: [
+            {
+              id: "deploy-001",
+              strategyId: "strat-001",
+              mode: "paper",
+              status: "running",
+              capital: 10000,
+              latestPnl: 120.5,
+              createdAt: "2026-03-01T08:00:00Z",
+              updatedAt: "2026-03-01T10:00:00Z",
+            },
+          ],
+          nextCursor: null,
+        });
+      }
+
+      if (url.pathname === "/v1/portfolios" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-portfolio-list-001",
+          items: [
+            {
+              id: "portfolio-001",
+              mode: "paper",
+              cash: 9500,
+              totalValue: 10120,
+              pnlTotal: 120,
+              positions: [],
+            },
+          ],
+        });
+      }
+
+      if (url.pathname === "/v1/orders" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-order-list-001",
+          items: [
+            {
+              id: "order-001",
+              symbol: "BTCUSDT",
+              side: "buy",
+              type: "market",
+              quantity: 0.1,
+              price: null,
+              status: "filled",
+              deploymentId: null,
+              createdAt: "2026-03-01T11:00:00Z",
+            },
+          ],
+          nextCursor: null,
+        });
+      }
+
+      return jsonResponse(
+        {
+          requestId: "req-unexpected",
+          error: { code: "not_found", message: `Unexpected request: ${method} ${url.pathname}` },
+        },
+        404,
+      );
+    }) as typeof fetch;
+
+    expect(
+      await run(
+        [
+          "bun",
+          "src/cli.ts",
+          "research",
+          "scan",
+          "--asset-classes",
+          "crypto",
+          "--capital",
+          "25000",
+        ],
+        fetchMock,
+      ),
+    ).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "strategy", "list"], fetchMock)).toBe(0);
+    expect(
+      await run(["bun", "src/cli.ts", "backtest", "get", "--backtest-id", "backtest-001"], fetchMock),
+    ).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "deploy", "list"], fetchMock)).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "portfolio", "list"], fetchMock)).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "order", "list"], fetchMock)).toBe(0);
+
+    expect(requests.map((request) => `${request.method} ${request.path}`)).toEqual([
+      "POST /v2/research/market-scan",
+      "GET /v1/strategies",
+      "GET /v1/backtests/backtest-001",
+      "GET /v1/deployments",
+      "GET /v1/portfolios",
+      "GET /v1/orders",
+    ]);
+
+    const researchPayload = JSON.parse(logs[0] ?? "{}") as { status: string; command: string };
+    const strategyPayload = JSON.parse(logs[1] ?? "{}") as { command: string; requestId: string };
+    expect(researchPayload.status).toBe("ok");
+    expect(researchPayload.command).toBe("research scan");
+    expect(strategyPayload.command).toBe("strategy list");
+    expect(strategyPayload.requestId).toBe("req-strategy-list-001");
+  });
+
+  test("deploy create sends idempotency header and table output is deterministic", async () => {
+    const logs: string[] = [];
+    const requests: RecordedRequest[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-core-002";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+      const headers = new Headers(init?.headers);
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      requests.push({ path: url.pathname, method, headers, body });
+
+      if (url.pathname === "/v1/deployments" && method === "POST") {
+        return jsonResponse(
+          {
+            requestId: "req-deploy-create-001",
+            deployment: {
+              id: "deploy-002",
+              strategyId: "strat-001",
+              mode: "paper",
+              status: "queued",
+              capital: 12000,
+              latestPnl: null,
+              createdAt: "2026-03-01T12:00:00Z",
+              updatedAt: "2026-03-01T12:00:00Z",
+            },
+          },
+          202,
+        );
+      }
+
+      return jsonResponse(
+        {
+          requestId: "req-unexpected",
+          error: { code: "not_found", message: `Unexpected request: ${method} ${url.pathname}` },
+        },
+        404,
+      );
+    }) as typeof fetch;
+
+    const exitCode = await run(
+      [
+        "bun",
+        "src/cli.ts",
+        "deploy",
+        "create",
+        "--strategy-id",
+        "strat-001",
+        "--mode",
+        "paper",
+        "--capital",
+        "12000",
+        "--idempotency-key",
+        "idem-core-fixed-001",
+        "--request-id",
+        "req-core-fixed-001",
+        "--output",
+        "table",
+      ],
+      fetchMock,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(requests.length).toBe(1);
+    expect(requests[0]?.path).toBe("/v1/deployments");
+    expect(requests[0]?.headers.get("Idempotency-Key")).toBe("idem-core-fixed-001");
+    expect(requests[0]?.headers.get("X-Request-Id")).toBe("req-core-fixed-001");
+    expect(logs.at(-1) ?? "").toContain("deploy create");
+    expect(logs.at(-1) ?? "").toContain("id");
+    expect(logs.at(-1) ?? "").toContain("deploy-002");
+  });
+
+  test("order create requires input payload file", async () => {
+    const errors: string[] = [];
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-core-003";
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    const exitCode = await run(["bun", "src/cli.ts", "order", "create"]);
+    expect(exitCode).toBe(1);
+
+    const envelope = JSON.parse(errors.at(-1) ?? "{}") as { status: string; message: string };
+    expect(envelope.status).toBe("error");
+    expect(envelope.message).toContain("--input is required");
+  });
+
+  test("order create accepts payload json file", async () => {
+    const tmp = mkdtempSync(join(tmpdir(), "core-order-"));
+    const payloadPath = join(tmp, "order.json");
+    writeFileSync(payloadPath, JSON.stringify({ type: "market" }), "utf-8");
+
+    const logs: string[] = [];
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-core-004";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+      if (url.pathname === "/v1/orders" && method === "POST") {
+        return jsonResponse(
+          {
+            requestId: "req-order-create-001",
+            order: {
+              id: "order-002",
+              symbol: "BTCUSDT",
+              side: "buy",
+              type: "market",
+              quantity: 0.1,
+              price: null,
+              status: "pending",
+              deploymentId: null,
+              createdAt: "2026-03-01T12:15:00Z",
+            },
+          },
+          201,
+        );
+      }
+      return jsonResponse(
+        {
+          requestId: "req-unexpected",
+          error: { code: "not_found", message: `Unexpected request: ${method} ${url.pathname}` },
+        },
+        404,
+      );
+    }) as typeof fetch;
+
+    try {
+      const exitCode = await run(
+        ["bun", "src/cli.ts", "order", "create", "--input", payloadPath],
+        fetchMock,
+      );
+      expect(exitCode).toBe(0);
+
+      const payload = JSON.parse(logs.at(-1) ?? "{}") as {
+        status: string;
+        command: string;
+        order: { id: string };
+      };
+      expect(payload.status).toBe("ok");
+      expect(payload.command).toBe("order create");
+      expect(payload.order.id).toBe("order-002");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});

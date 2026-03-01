@@ -3,6 +3,7 @@
 import { formatReviewRunError, runReviewRunCommand } from "./review-run-command";
 import { runValidationBotCommand } from "./validation-bot-command";
 import { runCoreCommand } from "./core-command";
+import { runDatasetCommand } from "./dataset-command";
 
 const BLOCKED_PROVIDER_HOST_HINTS = [
   "lona",
@@ -113,6 +114,8 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
         "deploy create|get|list|stop",
         "portfolio list|get",
         "order create|get|list|cancel",
+        "dataset upload init|complete",
+        "dataset validate|transform|publish|get|status|list",
       ],
     });
     return 0;
@@ -158,12 +161,17 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       return 0;
     }
 
+    if (args[0] === "dataset") {
+      await runDatasetCommand(args.slice(1), context);
+      return 0;
+    }
+
     emitError({
       status: "error",
       message:
         `Unknown command '${args[0]}'. Use 'review-run', 'validation run', ` +
         "'register', 'key', 'bot', 'research', 'strategy', 'backtest', " +
-        "'deploy', 'portfolio', or 'order'.",
+        "'deploy', 'portfolio', 'order', or 'dataset'.",
       command: args,
       target: baseUrl,
     });

@@ -27,6 +27,13 @@ Consumer-driven mock contract suite (Prism/OpenAPI-backed):
 bun run test:consumer:mock
 ```
 
+Sync vendored SDK from canonical OpenAPI and verify drift:
+
+```bash
+bun run sdk:generate
+bun run sdk:drift
+```
+
 ## Review Run Commands
 
 ```bash

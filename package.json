@@ -32,6 +32,8 @@
     "test:consumer:mock": "bash scripts/run-mock-consumer-contract-tests.sh",
     "lint": "bun run scripts/boundary-lint.ts",
     "typecheck": "tsc --noEmit",
+    "sdk:generate": "bash scripts/generate-sdk.sh",
+    "sdk:drift": "bash scripts/verify-sdk-drift.sh",
     "ci": "bun run lint && bun run typecheck && bun test"
   },
   "devDependencies": {

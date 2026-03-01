@@ -57,3 +57,23 @@ jobs:
 
       - name: Run consumer mock contract tests
         run: bash scripts/run-mock-consumer-contract-tests.sh
+
+  sdk-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Verify SDK drift against canonical OpenAPI
+        run: bash scripts/verify-sdk-drift.sh

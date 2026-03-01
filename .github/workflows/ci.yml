@@ -61,8 +61,15 @@ jobs:
   publish-validation:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout trading-cli
         uses: actions/checkout@v4
+
+      - name: Checkout trade-nexus authoritative spec source
+        uses: actions/checkout@v4
+        with:
+          repository: iamtxena/trade-nexus
+          ref: main
+          path: trade-nexus
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -78,7 +85,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Validate publish readiness
-        run: bash scripts/prepare-publish-release.sh
+        run: bash scripts/prepare-publish-release.sh --spec "${GITHUB_WORKSPACE}/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml"
 
   sdk-drift:
     runs-on: ubuntu-latest

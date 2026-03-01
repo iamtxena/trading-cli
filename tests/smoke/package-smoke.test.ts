@@ -61,12 +61,15 @@ describe("packaging smoke", () => {
     const packageJson = JSON.parse(readFileSync(resolve(ROOT, "package.json"), "utf-8")) as {
       private?: boolean;
       bin?: Record<string, string>;
+      exports?: Record<string, string>;
       scripts?: Record<string, string>;
       publishConfig?: Record<string, string>;
     };
 
     expect(packageJson.private).toBe(false);
     expect(packageJson.bin?.["trading-cli"]).toBe("dist/cli.js");
+    expect(packageJson.exports?.["."]).toBe("./dist/cli.js");
+    expect(packageJson.exports?.["./package.json"]).toBe("./package.json");
     expect(packageJson.scripts?.build).toContain("bun build");
     expect(packageJson.publishConfig?.access).toBe("public");
   });

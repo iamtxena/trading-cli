@@ -27,6 +27,24 @@ Consumer-driven mock contract suite (Prism/OpenAPI-backed):
 bun run test:consumer:mock
 ```
 
+Sync vendored SDK from canonical OpenAPI and verify drift:
+
+```bash
+bun run sdk:generate
+bun run sdk:drift
+```
+
+Authoritative contract source used by default:
+`/Users/txena/sandbox/16.enjoy/trading/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml`
+
+Override source explicitly when needed (for CI or alternate local checkout):
+
+```bash
+bun run sdk:drift --spec /absolute/path/to/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml
+```
+
+Note: SDK sync updates generated API/model files from the authoritative contract source and preserves local barrel exports (`index.ts`, `apis/index.ts`, `models/index.ts`) used by current CLI integration.
+
 ## Review Run Commands
 
 ```bash

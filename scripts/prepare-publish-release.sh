@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PACKAGE_JSON_PATH="${REPO_ROOT}/package.json"
+CHANGELOG_PATH="${REPO_ROOT}/CHANGELOG.md"
+
+PACKAGE_VERSION="$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(p.version);" "${PACKAGE_JSON_PATH}")"
+PACKAGE_PRIVATE="$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(String(Boolean(p.private)));" "${PACKAGE_JSON_PATH}")"
+
+if [[ ! "${PACKAGE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+  echo "package.json version is not semver-compatible: ${PACKAGE_VERSION}" >&2
+  exit 1
+fi
+
+if [[ "${PACKAGE_PRIVATE}" != "false" ]]; then
+  echo "package.json must set private=false before publishing." >&2
+  exit 1
+fi
+
+node -e '
+const fs = require("fs");
+const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+if (!pkg.exports || typeof pkg.exports !== "object") {
+  console.error("package.json exports field is required.");
+  process.exit(1);
+}
+if (pkg.exports["."] !== "./dist/cli.js") {
+  console.error("package.json exports['.'] must point to ./dist/cli.js.");
+  process.exit(1);
+}
+' "${PACKAGE_JSON_PATH}"
+
+if [[ ! -f "${CHANGELOG_PATH}" ]]; then
+  echo "Missing CHANGELOG.md. Add a release entry for version ${PACKAGE_VERSION}." >&2
+  exit 1
+fi
+
+if ! grep -Eq "^##[[:space:]]+\[?v?${PACKAGE_VERSION}\]?" "${CHANGELOG_PATH}"; then
+  echo "CHANGELOG.md is missing a heading for version ${PACKAGE_VERSION}." >&2
+  exit 1
+fi
+
+if [[ "${GITHUB_REF_TYPE:-}" == "tag" && -n "${GITHUB_REF_NAME:-}" ]]; then
+  EXPECTED_TAG="v${PACKAGE_VERSION}"
+  if [[ "${GITHUB_REF_NAME}" != "${EXPECTED_TAG}" ]]; then
+    echo "Tag mismatch: expected ${EXPECTED_TAG}, got ${GITHUB_REF_NAME}" >&2
+    exit 1
+  fi
+fi
+
+pushd "${REPO_ROOT}" >/dev/null
+bun run build
+npm pack --dry-run --ignore-scripts >/dev/null
+popd >/dev/null
+
+echo "Publish release checks passed for version ${PACKAGE_VERSION}."

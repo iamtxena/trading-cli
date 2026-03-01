@@ -4,6 +4,7 @@ import { formatReviewRunError, runReviewRunCommand } from "./review-run-command"
 import { runValidationBotCommand } from "./validation-bot-command";
 import { runCoreCommand } from "./core-command";
 import { runDatasetCommand } from "./dataset-command";
+import { runSharedCommand } from "./shared-command";
 
 const BLOCKED_PROVIDER_HOST_HINTS = [
   "lona",
@@ -116,6 +117,10 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
         "order create|get|list|cancel",
         "dataset upload init|complete",
         "dataset validate|transform|publish|get|status|list",
+        "shared-validation shared-with-me|run|artifact|review-comment|review-decision",
+        "invite create|list|accept|revoke",
+        "conversation session create|get",
+        "conversation turn create",
       ],
     });
     return 0;
@@ -166,12 +171,23 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       return 0;
     }
 
+    if (
+      args[0] === "shared-validation" ||
+      args[0] === "invite" ||
+      args[0] === "conversation" ||
+      args[0] === "conversations"
+    ) {
+      await runSharedCommand(args, context);
+      return 0;
+    }
+
     emitError({
       status: "error",
       message:
         `Unknown command '${args[0]}'. Use 'review-run', 'validation run', ` +
         "'register', 'key', 'bot', 'research', 'strategy', 'backtest', " +
-        "'deploy', 'portfolio', 'order', or 'dataset'.",
+        "'deploy', 'portfolio', 'order', 'dataset', 'shared-validation', " +
+        "'invite', or 'conversation'.",
       command: args,
       target: baseUrl,
     });

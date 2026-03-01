@@ -81,7 +81,11 @@ if [[ "${GITHUB_REF_TYPE:-}" == "tag" && -n "${GITHUB_REF_NAME:-}" ]]; then
 fi
 
 if [[ -x "${SCRIPT_DIR}/verify-sdk-drift.sh" ]]; then
-  "${SCRIPT_DIR}/verify-sdk-drift.sh" "${DRIFT_ARGS[@]}"
+  if (( ${#DRIFT_ARGS[@]} > 0 )); then
+    "${SCRIPT_DIR}/verify-sdk-drift.sh" "${DRIFT_ARGS[@]}"
+  else
+    "${SCRIPT_DIR}/verify-sdk-drift.sh"
+  fi
 fi
 
 pushd "${REPO_ROOT}" >/dev/null

@@ -43,6 +43,8 @@ Override source explicitly when needed (for CI or alternate local checkout):
 bun run sdk:drift --spec /absolute/path/to/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml
 ```
 
+Note: SDK sync updates generated API/model files from the authoritative contract source and preserves local barrel exports (`index.ts`, `apis/index.ts`, `models/index.ts`) used by current CLI integration.
+
 ## Review Run Commands
 
 ```bash

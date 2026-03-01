@@ -39,7 +39,11 @@ if [[ ! -d "${SDK_DIR}" ]]; then
   exit 1
 fi
 
-"${SCRIPT_DIR}/generate-sdk.sh" "${GEN_ARGS[@]}" >/dev/null
+if (( ${#GEN_ARGS[@]} > 0 )); then
+  "${SCRIPT_DIR}/generate-sdk.sh" "${GEN_ARGS[@]}" >/dev/null
+else
+  "${SCRIPT_DIR}/generate-sdk.sh" >/dev/null
+fi
 
 if ! git -C "${REPO_ROOT}" diff --quiet -- "${SDK_DIR}"; then
   echo "SDK drift detected in ${SDK_DIR}. Run \`bun run sdk:generate\` and commit generated files." >&2

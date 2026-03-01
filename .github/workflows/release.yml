@@ -20,6 +20,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout trade-nexus authoritative spec source
+        uses: actions/checkout@v4
+        with:
+          repository: iamtxena/trade-nexus
+          ref: main
+          path: trade-nexus
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -34,11 +41,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Validate semver/changelog/tag and package dry-run
-        run: bash scripts/prepare-publish-release.sh
+      - name: Validate semver/changelog/tag, SDK drift, and package dry-run
+        run: bash scripts/prepare-publish-release.sh --spec "${GITHUB_WORKSPACE}/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml"
 
       - name: Publish package to npm
-        if: ${{ github.event_name == 'push' || inputs.publish == 'true' }}
+        if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish == 'true' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_UPDATE_NOTIFIER: "false"

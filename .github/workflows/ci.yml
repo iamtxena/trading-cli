@@ -79,3 +79,30 @@ jobs:
 
       - name: Validate publish readiness
         run: bash scripts/prepare-publish-release.sh
+
+  sdk-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trading-cli
+        uses: actions/checkout@v4
+
+      - name: Checkout trade-nexus authoritative spec source
+        uses: actions/checkout@v4
+        with:
+          repository: iamtxena/trade-nexus
+          ref: main
+          path: trade-nexus
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Verify SDK drift against authoritative contract
+        run: bash scripts/verify-sdk-drift.sh --spec "${GITHUB_WORKSPACE}/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml"

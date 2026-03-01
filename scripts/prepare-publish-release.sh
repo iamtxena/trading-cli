@@ -7,8 +7,36 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PACKAGE_JSON_PATH="${REPO_ROOT}/package.json"
 CHANGELOG_PATH="${REPO_ROOT}/CHANGELOG.md"
 
+DRIFT_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --spec)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --spec" >&2
+        exit 1
+      fi
+      DRIFT_ARGS+=("--spec" "$2")
+      shift 2
+      ;;
+    -h|--help)
+      cat <<'USAGE'
+Usage: bash scripts/prepare-publish-release.sh [--spec <path>]
+
+Options:
+  --spec <path>  Authoritative OpenAPI contract path for SDK drift validation.
+USAGE
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
 PACKAGE_VERSION="$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(p.version);" "${PACKAGE_JSON_PATH}")"
-PACKAGE_PRIVATE="$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(String(Boolean(p.private)));" "${PACKAGE_JSON_PATH}")"
+PACKAGE_PRIVATE="$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(p.private === false ? 'false' : 'true');" "${PACKAGE_JSON_PATH}")"
 
 if [[ ! "${PACKAGE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
   echo "package.json version is not semver-compatible: ${PACKAGE_VERSION}" >&2
@@ -38,7 +66,8 @@ if [[ ! -f "${CHANGELOG_PATH}" ]]; then
   exit 1
 fi
 
-if ! grep -Eq "^##[[:space:]]+\[?v?${PACKAGE_VERSION}\]?" "${CHANGELOG_PATH}"; then
+ESCAPED_VERSION="${PACKAGE_VERSION//./\\.}"
+if ! grep -Eq "^##[[:space:]]+\[?v?${ESCAPED_VERSION}\]?" "${CHANGELOG_PATH}"; then
   echo "CHANGELOG.md is missing a heading for version ${PACKAGE_VERSION}." >&2
   exit 1
 fi
@@ -51,9 +80,12 @@ if [[ "${GITHUB_REF_TYPE:-}" == "tag" && -n "${GITHUB_REF_NAME:-}" ]]; then
   fi
 fi
 
+if [[ -x "${SCRIPT_DIR}/verify-sdk-drift.sh" ]]; then
+  "${SCRIPT_DIR}/verify-sdk-drift.sh" "${DRIFT_ARGS[@]}"
+fi
+
 pushd "${REPO_ROOT}" >/dev/null
-bun run build
-npm pack --dry-run --ignore-scripts >/dev/null
+npm pack --dry-run
 popd >/dev/null
 
 echo "Publish release checks passed for version ${PACKAGE_VERSION}."

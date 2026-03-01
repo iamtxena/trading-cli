@@ -22,7 +22,11 @@
 1. Version is semver-compatible.
 2. `CHANGELOG.md` has an entry for the current package version.
 3. Tag/version alignment (`v<package-version>`) on tag-triggered runs.
-4. Build and `npm pack --dry-run --ignore-scripts`.
+4. SDK drift gate against authoritative `trade-nexus` OpenAPI contract source.
+5. `npm pack --dry-run` publish packaging validation.
+
+Authoritative contract path for local validation:
+`/Users/txena/sandbox/16.enjoy/trading/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml`
 
 ## npm publish secrets (names only)
 

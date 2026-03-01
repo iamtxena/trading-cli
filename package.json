@@ -38,6 +38,8 @@
     "lint": "bun run scripts/boundary-lint.ts",
     "typecheck": "tsc --noEmit",
     "release:check": "bash scripts/prepare-publish-release.sh",
+    "sdk:generate": "bash scripts/generate-sdk.sh",
+    "sdk:drift": "bash scripts/verify-sdk-drift.sh",
     "ci": "bun run lint && bun run typecheck && bun test"
   },
   "devDependencies": {

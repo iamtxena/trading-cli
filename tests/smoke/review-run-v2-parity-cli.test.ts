@@ -77,7 +77,7 @@ describe("review-run parity closure commands", () => {
     );
 
     expect(exitCode).toBe(0);
-    expect(requestIdHeader).toBe("req-review-list-fixed-001");
+    expect(requestIdHeader === "req-review-list-fixed-001").toBe(true);
 
     const payload = JSON.parse(logs.at(-1) ?? "{}") as {
       command: string;
@@ -160,8 +160,8 @@ describe("review-run parity closure commands", () => {
     );
 
     expect(exitCode).toBe(0);
-    expect(idempotencyHeader).toBe("idem-review-submit-fixed-001");
-    expect(requestIdHeader).toBe("req-review-submit-fixed-001");
+    expect(idempotencyHeader === "idem-review-submit-fixed-001").toBe(true);
+    expect(requestIdHeader === "req-review-submit-fixed-001").toBe(true);
     expect(requestBody).toEqual({
       reviewerType: "agent",
       decision: "pass",

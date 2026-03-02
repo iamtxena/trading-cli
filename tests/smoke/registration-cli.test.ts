@@ -426,7 +426,7 @@ describe("bot registration and key lifecycle commands", () => {
 
     const exitCode = await run(["bun", "src/cli.ts", "bot", "list"], fetchMock);
     expect(exitCode).toBe(0);
-    expect(authHeader).toBe("Bearer token-bot-list-001");
+    expect(authHeader === "Bearer token-bot-list-001").toBe(true);
 
     const payload = JSON.parse(logs.at(-1) ?? "{}") as {
       command: string;

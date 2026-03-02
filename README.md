@@ -37,13 +37,24 @@ bun run sdk:generate
 bun run sdk:drift
 ```
 
-Authoritative contract source used by default:
+Authoritative spec resolution rule (used by both local scripts and CI):
+- Resolve contract content from git object `<spec-repo>@origin/main:<spec-relative-path>`.
+- `--spec <path>` is used only to identify repository + relative path.
+- Working-tree edits at that path are ignored for generation/drift checks.
+
+Default spec path anchor:
 `/Users/txena/sandbox/16.enjoy/trading/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml`
 
-Override source explicitly when needed (for CI or alternate local checkout):
+Override path anchor explicitly when needed (same revision rule still applies):
 
 ```bash
 bun run sdk:drift --spec /absolute/path/to/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml
+```
+
+Override revision explicitly when needed:
+
+```bash
+bun run sdk:drift --spec /absolute/path/to/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml --revision origin/main
 ```
 
 Note: SDK sync updates generated API/model files from the authoritative contract source, removes stale generated files, and preserves local barrel exports (`index.ts`, `apis/index.ts`, `models/index.ts`) used by current CLI integration.

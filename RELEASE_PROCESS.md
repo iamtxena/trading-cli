@@ -22,10 +22,15 @@
 1. Version is semver-compatible.
 2. `CHANGELOG.md` has an entry for the current package version.
 3. Tag/version alignment (`v<package-version>`) on tag-triggered runs.
-4. SDK drift gate against authoritative `trade-nexus` OpenAPI contract source.
+4. SDK drift gate against authoritative `trade-nexus` OpenAPI contract source, resolved as git object `<spec-repo>@origin/main:<spec-relative-path>`.
 5. `npm pack --dry-run` publish packaging validation.
 
-Authoritative contract path for local validation:
+Authoritative spec rule for local and CI:
+- `--spec` points to a spec path only to identify repository + relative path.
+- Script resolution uses git content at revision `origin/main` by default (or explicit `--revision` / `PLATFORM_API_SPEC_REVISION` override).
+- Working-tree edits at the `--spec` path do not affect drift/generation checks.
+
+Default local path anchor:
 `/Users/txena/sandbox/16.enjoy/trading/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml`
 
 ## npm publish secrets (names only)

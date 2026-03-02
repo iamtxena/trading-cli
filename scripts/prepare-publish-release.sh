@@ -19,12 +19,22 @@ while [[ $# -gt 0 ]]; do
       DRIFT_ARGS+=("--spec" "$2")
       shift 2
       ;;
+    --revision)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --revision" >&2
+        exit 1
+      fi
+      DRIFT_ARGS+=("--revision" "$2")
+      shift 2
+      ;;
     -h|--help)
       cat <<'USAGE'
-Usage: bash scripts/prepare-publish-release.sh [--spec <path>]
+Usage: bash scripts/prepare-publish-release.sh [--spec <path>] [--revision <git-ref>]
 
 Options:
-  --spec <path>  Authoritative OpenAPI contract path for SDK drift validation.
+  --spec <path>      Authoritative OpenAPI contract path used to derive repository + relative path.
+  --revision <ref>   Git revision used for authoritative spec content.
+                     Defaults to origin/main (or PLATFORM_API_SPEC_REVISION env var).
 USAGE
       exit 0
       ;;

@@ -602,4 +602,21 @@ describe("shared validation/invite/conversation command groups", () => {
     expect(payload.command).toBe("conversation turn create");
     expect(payload.sessionId).toBe("session-001");
   });
+
+  test("conversation turn help emits usage instead of an error", async () => {
+    const logs: string[] = [];
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "conversation", "turn"])).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "conversation", "turn", "--help"])).toBe(0);
+
+    const payload = JSON.parse(logs.at(-1) ?? "{}") as { command: string; usage: string[] };
+    expect(payload.command).toBe("conversation");
+    expect(payload.usage).toContain(
+      "trading-cli conversation turn create --session-id <id> --role user|assistant|system --message <text> [--metadata-json '{...}'] [--output json|table]",
+    );
+  });
 });

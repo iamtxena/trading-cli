@@ -1,83 +1,83 @@
 # Command Reference
 
-## Contract reconciliation path
+## Validation Run Commands
 
-- Path selected: **B (de-scope commands not present in authoritative OpenAPI)**.
-- De-scoped groups: `review-run`, `validation run`, `register`, `key`, `bot`, `shared-validation`, `invite`.
-- Active command surface is limited to operations present in the authoritative contract.
+1. `trading-cli review-run trigger`
+   - Starts a validation review run through `POST /v2/validation-runs` using the generated SDK.
+   - Returns stable identifiers and review-web URLs:
+     - `runId`
+     - `reviewWeb.path`
+     - `reviewWeb.url`
+   - Optional render trigger: `--render html,pdf`.
 
-## Core Commands
+2. `trading-cli review-run retrieve`
+   - Retrieves review run data from the review API lane via generated SDK.
+   - Modes:
+     - `--run-id <id>`: run summary + optional render status.
+     - no `--run-id`: list review runs with filters.
 
-1. `trading-cli research scan`
-   - Routes to `postMarketScanV1` or `postMarketScanV2` (select with `--version`).
+3. `trading-cli review-run render`
+   - Triggers optional HTML/PDF derived output from canonical validation JSON.
+   - Route: `POST /v2/validation-runs/{runId}/render`.
 
-2. `trading-cli strategy <create|get|list|update>`
-   - Uses `createStrategyV1`, `getStrategyV1`, `listStrategiesV1`, `updateStrategyV1`.
+4. `trading-cli validation run <trigger|retrieve|render>`
+   - Alias surface for the same review-run workflow.
+   - Kept for compatibility with validation-oriented command naming.
 
-3. `trading-cli backtest <create|get>`
-   - Uses `createBacktestV1`, `getBacktestV1`.
+## Bot Registration + Key Lifecycle
 
-4. `trading-cli deploy <create|get|list|stop>`
-   - Uses `createDeploymentV1`, `getDeploymentV1`, `listDeploymentsV1`, `stopDeploymentV1`.
+1. `trading-cli register invite`
+   - Self-registers bot through invite-code trial flow.
+   - Route: `POST /v2/validation-bots/registrations/invite-code`.
+   - Required flags (unless `--input` is used): `--invite-code`, `--bot-name`.
 
-5. `trading-cli portfolio <list|get>`
-   - Uses `listPortfoliosV1`, `getPortfolioV1`.
+2. `trading-cli register partner`
+   - Self-registers bot through partner key/secret bootstrap flow.
+   - Route: `POST /v2/validation-bots/registrations/partner-bootstrap`.
+   - Required flags (unless `--input` is used): `--partner-key`, `--partner-secret`, `--owner-email`, `--bot-name`.
 
-6. `trading-cli order <create|get|list|cancel>`
-   - Uses `createOrderV1`, `getOrderV1`, `listOrdersV1`, `cancelOrderV1`.
+3. `trading-cli key rotate`
+   - Rotates bot API key and returns raw key once.
+   - Route: `POST /v2/validation-bots/{botId}/keys/rotate`.
 
-## Dataset Commands
+4. `trading-cli key revoke`
+   - Revokes bot API key metadata (raw key is never returned).
+   - Route: `POST /v2/validation-bots/{botId}/keys/{keyId}/revoke`.
 
-1. `trading-cli dataset upload init`
-   - Uses `initDatasetUploadV1`.
-
-2. `trading-cli dataset upload complete`
-   - Uses `completeDatasetUploadV1`.
-
-3. `trading-cli dataset validate`
-   - Uses `validateDatasetV1`.
-
-4. `trading-cli dataset transform`
-   - Uses `transformDatasetCandlesV1`.
-
-5. `trading-cli dataset publish`
-   - Uses `publishDatasetLonaV1`.
-
-6. `trading-cli dataset get|status`
-   - Uses `getDatasetV1`.
-
-7. `trading-cli dataset list`
-   - Uses `listDatasetsV1`.
-
-## Conversation Commands
-
-1. `trading-cli conversation session create`
-   - Uses `createConversationSessionV2`.
-
-2. `trading-cli conversation session get`
-   - Uses `getConversationSessionV2`.
-
-3. `trading-cli conversation turn create`
-   - Uses `createConversationTurnV2`.
+5. `trading-cli bot <register|key> ...`
+   - Alias surface for `register` and `key` commands.
 
 ## Examples
 
 ```bash
-trading-cli research scan --asset-classes crypto,stocks --capital 50000 --version v2
+trading-cli review-run trigger \
+  --strategy-id strat-001 \
+  --requested-indicators ema,zigzag \
+  --dataset-ids dataset-btc-1h-2025 \
+  --backtest-report-ref blob://validation/candidate/backtest.json \
+  --render html
 
-trading-cli strategy list --status tested
+trading-cli review-run retrieve --run-id valrun-20260220-0001 --render-format html
 
-trading-cli deploy create --strategy-id strat-001 --mode paper --capital 10000
+trading-cli review-run retrieve --status completed --final-decision conditional_pass --limit 25
 
-trading-cli dataset upload init --filename btc-1h.csv --content-type text/csv --size-bytes 1024
+trading-cli review-run render --run-id valrun-20260220-0001 --format pdf
 
-trading-cli dataset status --dataset-id dataset-001
+trading-cli register invite --invite-code INVITE-123 --bot-name team-d-trial
 
-trading-cli conversation session create --channel cli --topic "market prep"
+trading-cli register partner \
+  --partner-key partner-key-001 \
+  --partner-secret partner-secret-001 \
+  --owner-email team-d@example.com \
+  --bot-name team-d-prod
+
+trading-cli key rotate --bot-id bot-001 --reason "routine rotation"
+
+trading-cli key revoke --bot-id bot-001 --key-id key-001 --reason "compromised"
 ```
 
 ## Output Policy
 
 - JSON output is canonical for automation and cross-tool integration.
 - Errors are emitted as structured JSON objects with HTTP/request metadata when available.
-- Table output remains deterministic when `--output table` is selected.
+- Issued raw API keys are shown once only on registration/rotation responses. Store securely immediately.

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
+import { formatReviewRunError, runReviewRunCommand } from "./review-run-command";
+import { runValidationBotCommand } from "./validation-bot-command";
 import { runCoreCommand } from "./core-command";
 import { runDatasetCommand } from "./dataset-command";
-import { runConversationCommand } from "./conversation-command";
+import { runSharedCommand } from "./shared-command";
 
 const BLOCKED_PROVIDER_HOST_HINTS = [
   "lona",
@@ -97,6 +99,16 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       message: "trading-cli ready",
       target: baseUrl,
       commands: [
+        "review-run trigger",
+        "review-run retrieve",
+        "review-run render",
+        "validation run trigger",
+        "validation run retrieve",
+        "validation run render",
+        "register invite",
+        "register partner",
+        "key rotate",
+        "key revoke",
         "research scan",
         "strategy create|get|list|update",
         "backtest create|get",
@@ -105,6 +117,8 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
         "order create|get|list|cancel",
         "dataset upload init|complete",
         "dataset validate|transform|publish|get|status|list",
+        "shared-validation shared-with-me|run|artifact|review-comment|review-decision",
+        "invite create|list|accept|revoke",
         "conversation session create|get",
         "conversation turn create",
       ],
@@ -119,6 +133,26 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       fetchImpl,
       emit: emitJson,
     };
+
+    if (args[0] === "review-run") {
+      await runReviewRunCommand(args.slice(1), context);
+      return 0;
+    }
+
+    if (args[0] === "validation" && args[1] === "run") {
+      await runReviewRunCommand(args.slice(2), context);
+      return 0;
+    }
+
+    if (args[0] === "register" || args[0] === "key") {
+      await runValidationBotCommand(args, context);
+      return 0;
+    }
+
+    if (args[0] === "bot") {
+      await runValidationBotCommand(args.slice(1), context);
+      return 0;
+    }
 
     if (
       args[0] === "research" ||
@@ -138,27 +172,35 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
     }
 
     if (
+      args[0] === "shared-validation" ||
+      args[0] === "invite" ||
       args[0] === "conversation" ||
       args[0] === "conversations"
     ) {
-      await runConversationCommand(args.slice(1), context);
+      await runSharedCommand(args, context);
       return 0;
     }
 
     emitError({
       status: "error",
       message:
-        `Unknown command '${args[0]}'. Use 'research', 'strategy', 'backtest', ` +
-        "'deploy', 'portfolio', 'order', 'dataset', or 'conversation'.",
+        `Unknown command '${args[0]}'. Use 'review-run', 'validation run', ` +
+        "'register', 'key', 'bot', 'research', 'strategy', 'backtest', " +
+        "'deploy', 'portfolio', 'order', 'dataset', 'shared-validation', " +
+        "'invite', or 'conversation'.",
       command: args,
       target: baseUrl,
     });
     return 1;
   } catch (error) {
-    emitError({
-      status: "error",
-      message: toErrorMessage(error),
-    });
+    try {
+      emitError(await formatReviewRunError(error));
+    } catch {
+      emitError({
+        status: "error",
+        message: toErrorMessage(error),
+      });
+    }
     return 1;
   }
 }

@@ -277,6 +277,7 @@ trading-cli dataset status --dataset-id dataset-001
 Alias:
 - `trading-cli validation run <...>` routes to the same handlers.
 - `review-run get` is alias for `review-run retrieve`.
+- `review-run runs` is alias for `review-run list`.
 
 #### `review-run trigger`
 ```bash
@@ -301,6 +302,41 @@ trading-cli review-run retrieve [--status queued|running|completed|failed] [--fi
 trading-cli review-run render --run-id <id> --format html|pdf [--request-id <id>] [--idempotency-key <key>]
 ```
 
+#### `review-run list`
+```bash
+trading-cli review-run list [--request-id <id>]
+```
+
+#### `review-run review`
+```bash
+trading-cli review-run review --run-id <id> --reviewer-type agent|trader --decision pass|conditional_pass|fail [--summary <text>] [--comments <csv>] [--findings-json <json-array>] [--findings-file <file>] [--request-id <id>] [--idempotency-key <key>]
+trading-cli review-run review --run-id <id> --input <review-run-review.json> [--request-id <id>] [--idempotency-key <key>]
+```
+
+#### `review-run review-comment`
+```bash
+trading-cli review-run review-comment --run-id <id> --body <text> [--evidence-refs <csv>] [--request-id <id>] [--idempotency-key <key>]
+trading-cli review-run review-comment --run-id <id> --input <review-comment.json> [--request-id <id>] [--idempotency-key <key>]
+```
+
+#### `review-run review-decision`
+```bash
+trading-cli review-run review-decision --run-id <id> --action approve|reject --decision pass|conditional_pass|fail --reason <text> [--evidence-refs <csv>] [--request-id <id>] [--idempotency-key <key>]
+trading-cli review-run review-decision --run-id <id> --input <review-decision.json> [--request-id <id>] [--idempotency-key <key>]
+```
+
+#### `review-run baseline`
+```bash
+trading-cli review-run baseline --run-id <id> --name <name> [--notes <text>] [--request-id <id>] [--idempotency-key <key>]
+trading-cli review-run baseline --input <validation-baseline.json> [--request-id <id>] [--idempotency-key <key>]
+```
+
+#### `review-run replay`
+```bash
+trading-cli review-run replay --baseline-id <id> --candidate-run-id <run-id> [--policy-overrides-json <json-object>] [--policy-overrides-file <file>] [--request-id <id>] [--idempotency-key <key>]
+trading-cli review-run replay --input <validation-replay.json> [--request-id <id>] [--idempotency-key <key>]
+```
+
 Example:
 ```bash
 trading-cli review-run trigger \
@@ -312,6 +348,12 @@ trading-cli review-run trigger \
 
 trading-cli review-run retrieve --run-id valrun-20260220-0001 --render-format html
 trading-cli review-run render --run-id valrun-20260220-0001 --format pdf
+trading-cli review-run list
+trading-cli review-run review --run-id valrun-20260220-0001 --reviewer-type agent --decision pass --summary "Checks are green"
+trading-cli review-run review-comment --run-id valrun-20260220-0001 --body "Monitor drawdown during rollout" --evidence-refs blob://validation/valrun-20260220-0001/backtest-report.json
+trading-cli review-run review-decision --run-id valrun-20260220-0001 --action approve --decision conditional_pass --reason "Approved with tighter controls"
+trading-cli review-run baseline --run-id valrun-20260220-0001 --name btc-1h-zigzag-baseline --notes "Gate baseline approved for regression replay"
+trading-cli review-run replay --baseline-id valbase-001 --candidate-run-id valrun-20260220-0099 --policy-overrides-json '{"metricDriftThresholdPct":0.25}'
 ```
 
 ### bot / register / key
@@ -319,9 +361,15 @@ trading-cli review-run render --run-id valrun-20260220-0001 --format pdf
 Bot bootstrap and key lifecycle.
 
 Aliases:
+- `trading-cli bot list` lists authenticated owner bot registry and key metadata.
 - `trading-cli bot register ...` maps to `trading-cli register ...`.
 - `trading-cli bot key ...` maps to `trading-cli key ...`.
 - `register invite-code` is accepted as alias of `register invite`.
+
+#### `bot list`
+```bash
+trading-cli bot list [--request-id <id>]
+```
 
 #### `register invite`
 ```bash
@@ -347,6 +395,7 @@ trading-cli key revoke --bot-id <id> --key-id <id> [--reason <text>] [--request-
 
 Example:
 ```bash
+trading-cli bot list
 trading-cli register invite --invite-code INVITE-TEAM-D-001 --bot-name wave-invite-bot
 trading-cli key rotate --bot-id bot-001 --reason "routine rotation"
 trading-cli key revoke --bot-id bot-001 --key-id key-001 --reason "compromised"

@@ -7,7 +7,7 @@
    - Must target Trade Nexus Platform API.
    - Provider hosts (Lona/live-engine/exchange APIs) are rejected by boundary checks.
 
-2. `PLATFORM_API_BEARER_TOKEN` (preferred auth)
+2. `PLATFORM_API_BEARER_TOKEN` (preferred explicit auth override)
    - Bearer token forwarded by generated SDK as `Authorization: Bearer <token>`.
 
 3. `PLATFORM_API_TOKEN` (fallback auth alias)
@@ -17,7 +17,24 @@
    - API key forwarded by generated SDK as `X-API-Key`.
    - Used by authenticated operations such as review runs and bot key rotate/revoke.
 
-5. `REVIEW_WEB_BASE_URL` (optional)
+5. `TRADING_CLI_ENABLE_AUTH_STORE` (optional)
+   - Enable/disable local credential store resolution for CLI auth tokens.
+   - Defaults to enabled, except `NODE_ENV=test` where it defaults to disabled.
+   - Explicit values: `1|true|yes|on` or `0|false|no|off`.
+
+6. `TRADING_CLI_AUTH_SECURE_STORE` (optional)
+   - Enable/disable OS secure-store usage (`security` keychain on macOS, `secret-tool` on Linux).
+   - Defaults to enabled.
+   - If disabled or unavailable, CLI falls back to deterministic local file storage.
+
+7. `TRADING_CLI_AUTH_FALLBACK_PATH` (optional)
+   - Override deterministic fallback credential file path.
+   - Default paths:
+     - macOS: `~/Library/Application Support/trading-cli/auth.json`
+     - Linux: `${XDG_CONFIG_HOME:-~/.config}/trading-cli/auth.json`
+     - Windows: `%APPDATA%/trading-cli/auth.json`
+
+8. `REVIEW_WEB_BASE_URL` (optional)
    - Base URL used to build stable review-open links in CLI output.
    - Default: `https://trade-nexus.lona.agency`.
 
@@ -25,6 +42,7 @@
 
 - Local Platform API default: `http://localhost:3000`
 - Review web default: `https://trade-nexus.lona.agency`
+- Access-token resolution order: `PLATFORM_API_BEARER_TOKEN` -> `PLATFORM_API_TOKEN` -> stored CLI credential.
 
 ## Command Inputs and Secret Handling
 

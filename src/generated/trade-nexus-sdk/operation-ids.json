@@ -1,6 +1,7 @@
 {
   "operationIds": [
     "acceptValidationInviteOnLoginV2",
+    "approveValidationCliDeviceAuthV2",
     "cancelOrderV1",
     "completeDatasetUploadV1",
     "createBacktestDataExportV2",
@@ -35,6 +36,7 @@
     "getValidationRunArtifactV2",
     "getValidationRunV2",
     "initDatasetUploadV1",
+    "introspectValidationCliTokenV2",
     "listDatasetsV1",
     "listDeploymentsV1",
     "listKnowledgePatternsV2",
@@ -42,10 +44,12 @@
     "listPortfoliosV1",
     "listStrategiesV1",
     "listValidationBotsV2",
+    "listValidationCliSessionsV2",
     "listValidationReviewRunsV2",
     "listValidationRunInvitesV2",
     "listValidationRunsSharedWithMeV2",
     "listValidationRunsV2",
+    "pollValidationCliDeviceTokenV2",
     "postMarketScanV1",
     "postMarketScanV2",
     "publishDatasetLonaV1",
@@ -53,13 +57,16 @@
     "registerValidationBotPartnerBootstrapV2",
     "replayValidationRegressionV2",
     "revokeValidationBotKeyV2",
+    "revokeValidationCliSessionV2",
     "revokeValidationInviteV2",
     "rotateValidationBotKeyV2",
     "searchKnowledgeV2",
+    "startValidationCliDeviceAuthV2",
     "stopDeploymentV1",
     "submitValidationRunReviewV2",
     "transformDatasetCandlesV1",
     "updateStrategyV1",
-    "validateDatasetV1"
+    "validateDatasetV1",
+    "whoamiValidationCliAuthV2"
   ]
 }

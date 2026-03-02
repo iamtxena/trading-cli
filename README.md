@@ -15,6 +15,7 @@ External CLI client for Trade Nexus v2.
   - invite-code trial path
   - partner key/secret bootstrap path
 - Supports bot key rotate/revoke lifecycle commands.
+- Supports human CLI device auth (`auth login`, `auth whoami`, `auth logout`) with secure token storage.
 
 ## Quick start
 
@@ -83,6 +84,14 @@ trading-cli register invite --help
 trading-cli register partner --help
 trading-cli key rotate --help
 trading-cli key revoke --help
+```
+
+## Human Auth Commands
+
+```bash
+trading-cli auth login --help
+trading-cli auth whoami --help
+trading-cli auth logout --help
 ```
 
 ## Core/Data Commands

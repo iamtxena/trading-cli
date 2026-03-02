@@ -13,9 +13,6 @@ Set runtime environment (required for non-registration commands):
 
 ```bash
 export PLATFORM_API_BASE_URL="https://api-nexus.lona.agency"
-export PLATFORM_API_BEARER_TOKEN="<token>"
-# Optional fallback auth:
-# export PLATFORM_API_KEY="<api-key>"
 ```
 
 Notes:
@@ -27,15 +24,17 @@ Notes:
 Auth session examples:
 
 ```bash
-# login (human token)
-export PLATFORM_API_BEARER_TOKEN="<jwt-access-token>"
-trading-cli health get
+# login (human device flow)
+trading-cli auth login
 
-# whoami (owner scope check)
-trading-cli bot list
+# whoami (current CLI session metadata)
+trading-cli auth whoami
 
 # logout
-unset PLATFORM_API_BEARER_TOKEN PLATFORM_API_TOKEN PLATFORM_API_KEY
+trading-cli auth logout
+
+# optional explicit override path for CI/manual runs
+export PLATFORM_API_BEARER_TOKEN="<token>"
 ```
 
 ## Global Conventions
@@ -47,6 +46,23 @@ unset PLATFORM_API_BEARER_TOKEN PLATFORM_API_TOKEN PLATFORM_API_KEY
 - CSV flags accept comma-separated values without spaces (example: `ema,zigzag,rsi`).
 
 ## Command Groups
+
+### auth
+
+#### `auth login`
+```bash
+trading-cli auth login [--scopes validation:read,validation:write] [--timeout-seconds <seconds>] [--poll-interval-seconds <seconds>] [--request-id <id>]
+```
+
+#### `auth whoami`
+```bash
+trading-cli auth whoami [--request-id <id>]
+```
+
+#### `auth logout`
+```bash
+trading-cli auth logout [--request-id <id>]
+```
 
 ### research
 

@@ -5,6 +5,7 @@ import { runValidationBotCommand } from "./validation-bot-command";
 import { runCoreCommand } from "./core-command";
 import { runDatasetCommand } from "./dataset-command";
 import { runSharedCommand } from "./shared-command";
+import { runAuthCommand } from "./auth-command";
 
 const BLOCKED_PROVIDER_HOST_HINTS = [
   "lona",
@@ -114,6 +115,9 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
         "key rotate",
         "key revoke",
         "bot list",
+        "auth login",
+        "auth whoami",
+        "auth logout",
         "health get",
         "research scan",
         "knowledge search|patterns|regime",
@@ -161,6 +165,11 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       return 0;
     }
 
+    if (args[0] === "auth") {
+      await runAuthCommand(args.slice(1), context);
+      return 0;
+    }
+
     if (
       args[0] === "health" ||
       args[0] === "research" ||
@@ -194,7 +203,7 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       status: "error",
       message:
         `Unknown command '${args[0]}'. Use 'review-run', 'validation run', ` +
-        "'register', 'key', 'bot', 'health', 'research', 'knowledge', 'strategy', 'backtest', " +
+        "'register', 'key', 'bot', 'auth', 'health', 'research', 'knowledge', 'strategy', 'backtest', " +
         "'deploy', 'portfolio', 'order', 'dataset', 'shared-validation', " +
         "'invite', or 'conversation'.",
       command: args,

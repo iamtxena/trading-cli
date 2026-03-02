@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,8 +31,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@latest
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -44,12 +48,11 @@ jobs:
       - name: Validate semver/changelog/tag, SDK drift, and package dry-run
         run: bash scripts/prepare-publish-release.sh --spec "${GITHUB_WORKSPACE}/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml"
 
-      - name: Publish package to npm
+      - name: Publish package to npm (Trusted Publishing via OIDC)
         if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || inputs.publish == 'true' }}
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_UPDATE_NOTIFIER: "false"
-        run: npm publish --access public
+        run: npm publish --access public --provenance
 
       - name: Dry-run complete
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish != 'true' }}

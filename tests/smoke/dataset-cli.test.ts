@@ -124,6 +124,18 @@ describe("dataset lifecycle command group", () => {
         });
       }
 
+      if (url.pathname === "/v1/datasets/dataset-001/quality-report" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-dataset-quality-001",
+          qualityReport: {
+            datasetId: "dataset-001",
+            status: "published_lona",
+            summary: "No data quality issues detected.",
+            issues: [],
+          },
+        });
+      }
+
       if (url.pathname === "/v1/datasets" && method === "GET") {
         return jsonResponse({
           requestId: "req-dataset-list-001",
@@ -232,6 +244,12 @@ describe("dataset lifecycle command group", () => {
         fetchMock,
       ),
     ).toBe(0);
+    expect(
+      await run(
+        ["bun", "src/cli.ts", "dataset", "quality-report", "--dataset-id", "dataset-001"],
+        fetchMock,
+      ),
+    ).toBe(0);
     expect(await run(["bun", "src/cli.ts", "dataset", "list"], fetchMock)).toBe(0);
 
     expect(requests.map((request) => `${request.method} ${request.path}`)).toEqual([
@@ -242,6 +260,7 @@ describe("dataset lifecycle command group", () => {
       "POST /v1/datasets/dataset-001/publish/lona",
       "GET /v1/datasets/dataset-001",
       "GET /v1/datasets/dataset-001",
+      "GET /v1/datasets/dataset-001/quality-report",
       "GET /v1/datasets",
     ]);
 
@@ -251,10 +270,13 @@ describe("dataset lifecycle command group", () => {
 
     const initPayload = JSON.parse(logs[0] ?? "{}") as { command: string; status: string };
     const statusPayload = JSON.parse(logs[6] ?? "{}") as { command: string; dataset: { status: string } };
+    const qualityPayload = JSON.parse(logs[7] ?? "{}") as { command: string; qualityReport: { datasetId: string } };
     expect(initPayload.command).toBe("dataset upload init");
     expect(initPayload.status).toBe("ok");
     expect(statusPayload.command).toBe("dataset status");
     expect(statusPayload.dataset.status).toBe("published_lona");
+    expect(qualityPayload.command).toBe("dataset quality-report");
+    expect(qualityPayload.qualityReport.datasetId).toBe("dataset-001");
   });
 
   test("validates required args pre-flight", async () => {

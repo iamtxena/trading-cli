@@ -13,6 +13,7 @@ import {
   type TableRow,
 } from "./command-utils";
 import {
+  type BacktestDataExportRequest,
   DeploymentStatus,
   OrderStatus,
   StrategyStatus,
@@ -20,12 +21,16 @@ import {
   type CreateDeploymentRequest,
   type CreateOrderRequest,
   type CreateStrategyRequest,
+  type KnowledgeSearchRequest,
   type MarketScanRequest,
   type UpdateStrategyRequest,
 } from "./generated/trade-nexus-sdk";
 import {
   createBacktestsApiClient,
+  createDataApiClient,
   createDeploymentsApiClient,
+  createHealthApiClient,
+  createKnowledgeApiClient,
   createOrdersApiClient,
   createPortfoliosApiClient,
   createResearchApiClient,
@@ -67,6 +72,18 @@ function parseNumeric(value: unknown, label: string): number {
   const parsed = Number(raw);
   if (!Number.isFinite(parsed)) {
     throw new Error(`${label} must be a valid number.`);
+  }
+  return parsed;
+}
+
+function parseOptionalPositiveInteger(value: unknown, label: string): number | undefined {
+  const raw = nonEmpty(value);
+  if (!raw) {
+    return undefined;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${label} must be a positive integer.`);
   }
   return parsed;
 }
@@ -302,6 +319,190 @@ async function runResearchCommand(args: string[], context: CommandContext): Prom
     columns: ["name", "assetClass", "description"],
     emptyMessage: "No strategy ideas returned.",
   });
+}
+
+async function runKnowledgeCommand(args: string[], context: CommandContext): Promise<void> {
+  const subcommand = args[0];
+  if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+    context.emit({
+      status: "ok",
+      command: "knowledge",
+      usage: [
+        "trading-cli knowledge search --query \"momentum\" [--assets btc,eth] [--limit 10] [--output json|table]",
+        "trading-cli knowledge search --input <knowledge-search.json> [--output json|table]",
+        "trading-cli knowledge patterns [--type <pattern-type>] [--asset <asset>] [--limit 20] [--output json|table]",
+        "trading-cli knowledge regime --asset <asset> [--output json|table]",
+      ],
+    });
+    return;
+  }
+
+  const api = createKnowledgeApiClient(context);
+
+  if (subcommand === "search") {
+    const parsed = parseArgs({
+      args: args.slice(1),
+      options: {
+        input: { type: "string" },
+        query: { type: "string" },
+        assets: { type: "string" },
+        limit: { type: "string" },
+        "request-id": { type: "string" },
+        output: { type: "string" },
+      },
+      allowPositionals: false,
+      strict: true,
+    });
+
+    const output = parseOutputMode(parsed.values.output);
+    const response = await api.searchKnowledgeV2({
+      knowledgeSearchRequest: parseKnowledgeSearchRequest(parsed.values),
+      xRequestId: parseRequestId(parsed.values),
+    });
+
+    const serial = toSerializable(response) as Record<string, unknown>;
+    const items = (serial.items as Record<string, unknown>[]) ?? [];
+    emitOutput(
+      context,
+      output,
+      { status: "ok", command: "knowledge search", ...serial },
+      {
+        title: "knowledge search",
+        notes: [`requestId: ${response.requestId}`],
+        rows: items.map((item) => toKnowledgeSearchTableRow(item)),
+        columns: ["kind", "id", "title", "score", "summary"],
+        emptyMessage: "No knowledge matches returned.",
+      },
+    );
+    return;
+  }
+
+  if (subcommand === "patterns") {
+    const parsed = parseArgs({
+      args: args.slice(1),
+      options: {
+        type: { type: "string" },
+        asset: { type: "string" },
+        limit: { type: "string" },
+        "request-id": { type: "string" },
+        output: { type: "string" },
+      },
+      allowPositionals: false,
+      strict: true,
+    });
+
+    const output = parseOutputMode(parsed.values.output);
+    const response = await api.listKnowledgePatternsV2({
+      xRequestId: parseRequestId(parsed.values),
+      type: nonEmpty(parsed.values.type),
+      asset: nonEmpty(parsed.values.asset),
+      limit: parseOptionalPositiveInteger(parsed.values.limit, "--limit"),
+    });
+
+    const serial = toSerializable(response) as Record<string, unknown>;
+    const items = (serial.items as Record<string, unknown>[]) ?? [];
+    emitOutput(
+      context,
+      output,
+      { status: "ok", command: "knowledge patterns", ...serial },
+      {
+        title: "knowledge patterns",
+        notes: [`requestId: ${response.requestId}`],
+        rows: items.map((item) => toKnowledgePatternTableRow(item)),
+        columns: ["id", "name", "type", "confidenceScore", "assets", "timeframes", "suitableRegimes"],
+        emptyMessage: "No knowledge patterns returned.",
+      },
+    );
+    return;
+  }
+
+  if (subcommand === "regime") {
+    const parsed = parseArgs({
+      args: args.slice(1),
+      options: {
+        asset: { type: "string" },
+        "request-id": { type: "string" },
+        output: { type: "string" },
+      },
+      allowPositionals: false,
+      strict: true,
+    });
+
+    const asset = nonEmpty(parsed.values.asset);
+    if (!asset) {
+      throw new Error("--asset is required.");
+    }
+
+    const output = parseOutputMode(parsed.values.output);
+    const response = await api.getKnowledgeRegimeV2({
+      asset,
+      xRequestId: parseRequestId(parsed.values),
+    });
+
+    const serial = toSerializable(response) as Record<string, unknown>;
+    const regime = serial.regime as Record<string, unknown>;
+    emitOutput(
+      context,
+      output,
+      { status: "ok", command: "knowledge regime", ...serial },
+      {
+        title: "knowledge regime",
+        notes: [`requestId: ${response.requestId}`],
+        rows: [toKnowledgeRegimeTableRow(regime)],
+        columns: ["id", "asset", "regime", "volatility", "indicators", "startAt", "endAt"],
+      },
+    );
+    return;
+  }
+
+  throw new Error(`Unknown knowledge subcommand '${subcommand}'. Use 'search', 'patterns', or 'regime'.`);
+}
+
+async function runHealthCommand(args: string[], context: CommandContext): Promise<void> {
+  const subcommand = args[0];
+  if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+    context.emit({
+      status: "ok",
+      command: "health",
+      usage: ["trading-cli health get [--output json|table]"],
+    });
+    return;
+  }
+
+  if (subcommand !== "get") {
+    throw new Error(`Unknown health subcommand '${subcommand}'. Use 'get'.`);
+  }
+
+  const parsed = parseArgs({
+    args: args.slice(1),
+    options: {
+      output: { type: "string" },
+    },
+    allowPositionals: false,
+    strict: true,
+  });
+
+  const output = parseOutputMode(parsed.values.output);
+  const api = createHealthApiClient(context, { requireAuth: false });
+  const response = await api.getHealthV1();
+  const serial = toSerializable(response) as Record<string, unknown>;
+
+  emitOutput(
+    context,
+    output,
+    { status: "ok", command: "health get", health: serial },
+    {
+      title: "health get",
+      rows: [
+        {
+          status: serial.status as string,
+          service: serial.service as string,
+          timestamp: serial.timestamp as string,
+        },
+      ],
+      columns: ["status", "service", "timestamp"],
+    },
+  );
 }
 
 function parseCreateStrategyRequest(values: ParsedValues): CreateStrategyRequest {
@@ -568,6 +769,44 @@ function parseCreateBacktestRequest(values: ParsedValues): CreateBacktestRequest
   };
 }
 
+function parseBacktestDataExportRequest(values: ParsedValues): BacktestDataExportRequest {
+  const inputPath = nonEmpty(values.input);
+  if (inputPath) {
+    return parseJsonFile<BacktestDataExportRequest>(inputPath, "backtest export create payload");
+  }
+
+  const datasetIds = parseCsv(values["dataset-ids"]);
+  if (datasetIds.length === 0) {
+    throw new Error("--dataset-ids is required when --input is not provided.");
+  }
+  const assetClasses = parseCsv(values["asset-classes"]);
+
+  return {
+    datasetIds,
+    ...(assetClasses.length > 0 ? { assetClasses } : {}),
+  };
+}
+
+function parseKnowledgeSearchRequest(values: ParsedValues): KnowledgeSearchRequest {
+  const inputPath = nonEmpty(values.input);
+  if (inputPath) {
+    return parseJsonFile<KnowledgeSearchRequest>(inputPath, "knowledge search payload");
+  }
+
+  const query = nonEmpty(values.query);
+  if (!query) {
+    throw new Error("--query is required when --input is not provided.");
+  }
+  const assets = parseCsv(values.assets);
+  const limit = parseOptionalPositiveInteger(values.limit, "--limit");
+
+  return {
+    query,
+    ...(assets.length > 0 ? { assets } : {}),
+    ...(limit !== undefined ? { limit } : {}),
+  };
+}
+
 function serializeBacktestTable(backtest: Record<string, unknown>): TableRow {
   return {
     id: backtest.id as string,
@@ -577,6 +816,148 @@ function serializeBacktestTable(backtest: Record<string, unknown>): TableRow {
     completedAt: backtest.completedAt as string,
     createdAt: backtest.createdAt as string,
   };
+}
+
+function serializeBacktestExportTable(exportRecord: Record<string, unknown>): TableRow {
+  const datasetIds = Array.isArray(exportRecord.datasetIds) ? exportRecord.datasetIds : [];
+  const assetClasses = Array.isArray(exportRecord.assetClasses) ? exportRecord.assetClasses : [];
+  return {
+    id: exportRecord.id as string,
+    status: exportRecord.status as string,
+    datasetCount: datasetIds.length,
+    assetClassCount: assetClasses.length,
+    downloadUrl: exportRecord.downloadUrl as string | null | undefined,
+    updatedAt: exportRecord.updatedAt as string,
+  };
+}
+
+function toKnowledgeSearchTableRow(item: Record<string, unknown>): TableRow {
+  return {
+    kind: item.kind as string,
+    id: item.id as string,
+    title: item.title as string,
+    score: item.score as number,
+    summary: item.summary as string,
+  };
+}
+
+function toKnowledgePatternTableRow(pattern: Record<string, unknown>): TableRow {
+  const assets = Array.isArray(pattern.assets) ? pattern.assets.join(",") : "";
+  const timeframes = Array.isArray(pattern.timeframes) ? pattern.timeframes.join(",") : "";
+  const suitableRegimes = Array.isArray(pattern.suitableRegimes)
+    ? pattern.suitableRegimes.join(",")
+    : "";
+
+  return {
+    id: pattern.id as string,
+    name: pattern.name as string,
+    type: pattern.type as string,
+    confidenceScore: pattern.confidenceScore as number,
+    assets,
+    timeframes,
+    suitableRegimes,
+  };
+}
+
+function toKnowledgeRegimeTableRow(regime: Record<string, unknown>): TableRow {
+  const indicators = regime.indicators as Record<string, unknown> | undefined;
+  return {
+    id: regime.id as string,
+    asset: regime.asset as string,
+    regime: regime.regime as string,
+    volatility: regime.volatility as string,
+    indicators: indicators ? Object.keys(indicators).length : 0,
+    startAt: regime.startAt as string,
+    endAt: regime.endAt as string | null | undefined,
+  };
+}
+
+async function runBacktestExportCreateCommand(
+  args: string[],
+  context: CommandContext,
+): Promise<void> {
+  const parsed = parseArgs({
+    args,
+    options: {
+      input: { type: "string" },
+      "dataset-ids": { type: "string" },
+      "asset-classes": { type: "string" },
+      "request-id": { type: "string" },
+      output: { type: "string" },
+    },
+    allowPositionals: false,
+    strict: true,
+  });
+
+  const output = parseOutputMode(parsed.values.output);
+  const api = createDataApiClient(context);
+  const response = await api.createBacktestDataExportV2({
+    backtestDataExportRequest: parseBacktestDataExportRequest(parsed.values),
+    xRequestId: parseRequestId(parsed.values),
+  });
+
+  const serial = toSerializable(response) as Record<string, unknown>;
+  const exportRecord = serial._export as Record<string, unknown>;
+  emitOutput(
+    context,
+    output,
+    {
+      status: "ok",
+      command: "backtest export create",
+      requestId: serial.requestId,
+      export: exportRecord,
+    },
+    {
+      title: "backtest export create",
+      notes: [`requestId: ${response.requestId}`],
+      rows: [serializeBacktestExportTable(exportRecord)],
+      columns: ["id", "status", "datasetCount", "assetClassCount", "downloadUrl", "updatedAt"],
+    },
+  );
+}
+
+async function runBacktestExportGetCommand(args: string[], context: CommandContext): Promise<void> {
+  const parsed = parseArgs({
+    args,
+    options: {
+      "export-id": { type: "string" },
+      "request-id": { type: "string" },
+      output: { type: "string" },
+    },
+    allowPositionals: false,
+    strict: true,
+  });
+
+  const exportId = nonEmpty(parsed.values["export-id"]);
+  if (!exportId) {
+    throw new Error("--export-id is required.");
+  }
+
+  const output = parseOutputMode(parsed.values.output);
+  const api = createDataApiClient(context);
+  const response = await api.getBacktestDataExportV2({
+    exportId,
+    xRequestId: parseRequestId(parsed.values),
+  });
+
+  const serial = toSerializable(response) as Record<string, unknown>;
+  const exportRecord = serial._export as Record<string, unknown>;
+  emitOutput(
+    context,
+    output,
+    {
+      status: "ok",
+      command: "backtest export get",
+      requestId: serial.requestId,
+      export: exportRecord,
+    },
+    {
+      title: "backtest export get",
+      notes: [`requestId: ${response.requestId}`],
+      rows: [serializeBacktestExportTable(exportRecord)],
+      columns: ["id", "status", "datasetCount", "assetClassCount", "downloadUrl", "updatedAt"],
+    },
+  );
 }
 
 async function runBacktestCommand(args: string[], context: CommandContext): Promise<void> {
@@ -589,12 +970,43 @@ async function runBacktestCommand(args: string[], context: CommandContext): Prom
         "trading-cli backtest create --strategy-id <id> --start-date 2025-01-01 --end-date 2025-03-01 [--dataset-ids <csv>] [--output json|table]",
         "trading-cli backtest create --strategy-id <id> --input <create-backtest.json> [--output json|table]",
         "trading-cli backtest get --backtest-id <id> [--output json|table]",
+        "trading-cli backtest export create --dataset-ids <csv> [--asset-classes <csv>] [--output json|table]",
+        "trading-cli backtest export create --input <backtest-export.json> [--output json|table]",
+        "trading-cli backtest export get --export-id <id> [--output json|table]",
       ],
     });
     return;
   }
 
   const api = createBacktestsApiClient(context);
+
+  if (subcommand === "export") {
+    const action = args[1];
+    if (!action || action === "--help" || action === "-h") {
+      context.emit({
+        status: "ok",
+        command: "backtest export",
+        usage: [
+          "trading-cli backtest export create --dataset-ids <csv> [--asset-classes <csv>] [--output json|table]",
+          "trading-cli backtest export create --input <backtest-export.json> [--output json|table]",
+          "trading-cli backtest export get --export-id <id> [--output json|table]",
+        ],
+      });
+      return;
+    }
+
+    if (action === "create") {
+      await runBacktestExportCreateCommand(args.slice(2), context);
+      return;
+    }
+
+    if (action === "get") {
+      await runBacktestExportGetCommand(args.slice(2), context);
+      return;
+    }
+
+    throw new Error(`Unknown backtest export subcommand '${action}'. Use 'create' or 'get'.`);
+  }
 
   if (subcommand === "create") {
     const parsed = parseArgs({
@@ -680,7 +1092,7 @@ async function runBacktestCommand(args: string[], context: CommandContext): Prom
     return;
   }
 
-  throw new Error(`Unknown backtest subcommand '${subcommand}'. Use 'create' or 'get'.`);
+  throw new Error(`Unknown backtest subcommand '${subcommand}'. Use 'create', 'get', or 'export'.`);
 }
 
 function parseCreateDeploymentRequest(values: ParsedValues): CreateDeploymentRequest {
@@ -1163,13 +1575,23 @@ export async function runCoreCommand(args: string[], context: CommandContext): P
     context.emit({
       status: "ok",
       command: "core",
-      groups: ["research", "strategy", "backtest", "deploy", "portfolio", "order"],
+      groups: ["health", "research", "knowledge", "strategy", "backtest", "deploy", "portfolio", "order"],
     });
+    return;
+  }
+
+  if (group === "health") {
+    await runHealthCommand(args.slice(1), context);
     return;
   }
 
   if (group === "research") {
     await runResearchCommand(args.slice(1), context);
+    return;
+  }
+
+  if (group === "knowledge") {
+    await runKnowledgeCommand(args.slice(1), context);
     return;
   }
 

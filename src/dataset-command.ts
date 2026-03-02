@@ -496,6 +496,57 @@ async function runGetOrStatusCommand(
   );
 }
 
+async function runQualityReportCommand(args: string[], context: CommandContext): Promise<void> {
+  const parsed = parseArgs({
+    args,
+    options: {
+      "dataset-id": { type: "string" },
+      "request-id": { type: "string" },
+      output: { type: "string" },
+    },
+    allowPositionals: false,
+    strict: true,
+  });
+
+  const datasetId = nonEmpty(parsed.values["dataset-id"]);
+  if (!datasetId) {
+    throw new Error("--dataset-id is required.");
+  }
+
+  const output = parseOutputMode(parsed.values.output);
+  const api = createDatasetsApiClient(context);
+  const response = await api.getDatasetQualityReportV1({
+    datasetId,
+    xRequestId: parseRequestId(parsed.values),
+  });
+
+  const serial = toSerializable(response) as Record<string, unknown>;
+  const qualityReport = serial.qualityReport as Record<string, unknown>;
+  const issues = (qualityReport.issues as unknown[]) ?? [];
+  emitOutput(
+    context,
+    output,
+    {
+      status: "ok",
+      command: "dataset quality-report",
+      ...serial,
+    },
+    {
+      title: "dataset quality-report",
+      notes: [`requestId: ${response.requestId}`],
+      rows: [
+        {
+          datasetId: qualityReport.datasetId as string,
+          status: qualityReport.status as string,
+          summary: qualityReport.summary as string,
+          issuesCount: issues.length,
+        },
+      ],
+      columns: ["datasetId", "status", "summary", "issuesCount"],
+    },
+  );
+}
+
 async function runListCommand(args: string[], context: CommandContext): Promise<void> {
   const parsed = parseArgs({
     args,
@@ -548,6 +599,7 @@ function emitDatasetHelp(context: CommandContext): void {
       "trading-cli dataset publish --dataset-id <id> [--mode explicit|just_in_time] [--output json|table]",
       "trading-cli dataset get --dataset-id <id> [--output json|table]",
       "trading-cli dataset status --dataset-id <id> [--output json|table]",
+      "trading-cli dataset quality-report --dataset-id <id> [--output json|table]",
       "trading-cli dataset list [--cursor <token>] [--output json|table]",
     ],
   });
@@ -612,12 +664,16 @@ export async function runDatasetCommand(args: string[], context: CommandContext)
     await runGetOrStatusCommand(args.slice(1), context, "dataset status");
     return;
   }
+  if (subcommand === "quality-report") {
+    await runQualityReportCommand(args.slice(1), context);
+    return;
+  }
   if (subcommand === "list") {
     await runListCommand(args.slice(1), context);
     return;
   }
 
   throw new Error(
-    `Unknown dataset subcommand '${subcommand}'. Use 'upload', 'validate', 'transform', 'publish', 'get', 'status', or 'list'.`,
+    `Unknown dataset subcommand '${subcommand}'. Use 'upload', 'validate', 'transform', 'publish', 'get', 'status', 'quality-report', or 'list'.`,
   );
 }

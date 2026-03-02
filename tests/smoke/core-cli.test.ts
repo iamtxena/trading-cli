@@ -37,7 +37,7 @@ afterEach(() => {
 });
 
 describe("core command groups", () => {
-  test("research/strategy/backtest/deploy/portfolio/order map to canonical endpoints", async () => {
+  test("health/research/knowledge/strategy/backtest/deploy/portfolio/order map to canonical endpoints", async () => {
     const requests: RecordedRequest[] = [];
     const logs: string[] = [];
 
@@ -70,6 +70,62 @@ describe("core command groups", () => {
         });
       }
 
+      if (url.pathname === "/v2/knowledge/search" && method === "POST") {
+        return jsonResponse({
+          requestId: "req-knowledge-search-001",
+          items: [
+            {
+              kind: "pattern",
+              id: "kp-001",
+              title: "Momentum breakout",
+              summary: "Break resistance with trend confirmation.",
+              score: 0.93,
+              evidence: {},
+            },
+          ],
+        });
+      }
+
+      if (url.pathname === "/v2/knowledge/patterns" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-knowledge-patterns-001",
+          items: [
+            {
+              id: "kp-001",
+              name: "Momentum breakout",
+              type: "momentum",
+              description: "Breakout pattern",
+              suitableRegimes: ["risk-on"],
+              assets: ["btc"],
+              timeframes: ["1h"],
+              confidenceScore: 0.9,
+              sourceRef: null,
+              schemaVersion: "knowledge.pattern.v1",
+              createdAt: "2026-03-01T08:00:00Z",
+              updatedAt: "2026-03-01T08:00:00Z",
+            },
+          ],
+        });
+      }
+
+      if (url.pathname === "/v2/knowledge/regimes/btc" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-knowledge-regime-001",
+          regime: {
+            id: "regime-001",
+            asset: "btc",
+            regime: "risk-on",
+            volatility: "medium",
+            indicators: { rsi: 58.2 },
+            startAt: "2026-03-01T06:00:00Z",
+            endAt: null,
+            notes: null,
+            schemaVersion: "knowledge.regime.v1",
+            createdAt: "2026-03-01T06:00:00Z",
+          },
+        });
+      }
+
       if (url.pathname === "/v1/strategies" && method === "GET") {
         return jsonResponse({
           requestId: "req-strategy-list-001",
@@ -86,6 +142,49 @@ describe("core command groups", () => {
             },
           ],
           nextCursor: null,
+        });
+      }
+
+      if (url.pathname === "/v2/data/exports/backtest" && method === "POST") {
+        return jsonResponse(
+          {
+            requestId: "req-backtest-export-create-001",
+            export: {
+              id: "export-001",
+              status: "queued",
+              datasetIds: ["dataset-001"],
+              assetClasses: ["crypto"],
+              downloadUrl: null,
+              lineage: {},
+              createdAt: "2026-03-01T05:00:00Z",
+              updatedAt: "2026-03-01T05:00:00Z",
+            },
+          },
+          202,
+        );
+      }
+
+      if (url.pathname === "/v2/data/exports/export-001" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-backtest-export-get-001",
+          export: {
+            id: "export-001",
+            status: "completed",
+            datasetIds: ["dataset-001"],
+            assetClasses: ["crypto"],
+            downloadUrl: "https://downloads.local/export-001.zip",
+            lineage: {},
+            createdAt: "2026-03-01T05:00:00Z",
+            updatedAt: "2026-03-01T05:10:00Z",
+          },
+        });
+      }
+
+      if (url.pathname === "/v1/health" && method === "GET") {
+        return jsonResponse({
+          status: "ok",
+          service: "platform-api",
+          timestamp: "2026-03-01T12:34:56Z",
         });
       }
 
@@ -184,7 +283,70 @@ describe("core command groups", () => {
         fetchMock,
       ),
     ).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "health", "get"], fetchMock)).toBe(0);
+    expect(
+      await run(
+        [
+          "bun",
+          "src/cli.ts",
+          "knowledge",
+          "search",
+          "--query",
+          "breakout momentum",
+          "--assets",
+          "btc",
+          "--limit",
+          "5",
+        ],
+        fetchMock,
+      ),
+    ).toBe(0);
+    expect(
+      await run(
+        [
+          "bun",
+          "src/cli.ts",
+          "knowledge",
+          "patterns",
+          "--type",
+          "momentum",
+          "--asset",
+          "btc",
+          "--limit",
+          "10",
+        ],
+        fetchMock,
+      ),
+    ).toBe(0);
+    expect(
+      await run(
+        ["bun", "src/cli.ts", "knowledge", "regime", "--asset", "btc"],
+        fetchMock,
+      ),
+    ).toBe(0);
     expect(await run(["bun", "src/cli.ts", "strategy", "list"], fetchMock)).toBe(0);
+    expect(
+      await run(
+        [
+          "bun",
+          "src/cli.ts",
+          "backtest",
+          "export",
+          "create",
+          "--dataset-ids",
+          "dataset-001",
+          "--asset-classes",
+          "crypto",
+        ],
+        fetchMock,
+      ),
+    ).toBe(0);
+    expect(
+      await run(
+        ["bun", "src/cli.ts", "backtest", "export", "get", "--export-id", "export-001"],
+        fetchMock,
+      ),
+    ).toBe(0);
     expect(
       await run(["bun", "src/cli.ts", "backtest", "get", "--backtest-id", "backtest-001"], fetchMock),
     ).toBe(0);
@@ -194,19 +356,31 @@ describe("core command groups", () => {
 
     expect(requests.map((request) => `${request.method} ${request.path}`)).toEqual([
       "POST /v2/research/market-scan",
+      "GET /v1/health",
+      "POST /v2/knowledge/search",
+      "GET /v2/knowledge/patterns",
+      "GET /v2/knowledge/regimes/btc",
       "GET /v1/strategies",
+      "POST /v2/data/exports/backtest",
+      "GET /v2/data/exports/export-001",
       "GET /v1/backtests/backtest-001",
       "GET /v1/deployments",
       "GET /v1/portfolios",
       "GET /v1/orders",
     ]);
 
-    const researchPayload = JSON.parse(logs[0] ?? "{}") as { status: string; command: string };
-    const strategyPayload = JSON.parse(logs[1] ?? "{}") as { command: string; requestId: string };
-    expect(researchPayload.status).toBe("ok");
-    expect(researchPayload.command).toBe("research scan");
-    expect(strategyPayload.command).toBe("strategy list");
-    expect(strategyPayload.requestId).toBe("req-strategy-list-001");
+    const payloads = logs.map((entry) => JSON.parse(entry) as { command?: string; status?: string; requestId?: string });
+    const researchPayload = payloads.find((payload) => payload.command === "research scan");
+    const strategyPayload = payloads.find((payload) => payload.command === "strategy list");
+    const healthPayload = payloads.find((payload) => payload.command === "health get");
+    const exportPayload = payloads.find((payload) => payload.command === "backtest export create");
+
+    expect(researchPayload?.status).toBe("ok");
+    expect(researchPayload?.command).toBe("research scan");
+    expect(strategyPayload?.command).toBe("strategy list");
+    expect(strategyPayload?.requestId).toBe("req-strategy-list-001");
+    expect(healthPayload?.status).toBe("ok");
+    expect(exportPayload?.status).toBe("ok");
   });
 
   test("deploy create sends idempotency header and table output is deterministic", async () => {

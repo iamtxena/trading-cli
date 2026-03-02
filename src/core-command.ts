@@ -978,8 +978,6 @@ async function runBacktestCommand(args: string[], context: CommandContext): Prom
     return;
   }
 
-  const api = createBacktestsApiClient(context);
-
   if (subcommand === "export") {
     const action = args[1];
     if (!action || action === "--help" || action === "-h") {
@@ -1009,6 +1007,7 @@ async function runBacktestCommand(args: string[], context: CommandContext): Prom
   }
 
   if (subcommand === "create") {
+    const api = createBacktestsApiClient(context);
     const parsed = parseArgs({
       args: args.slice(1),
       options: {
@@ -1055,6 +1054,7 @@ async function runBacktestCommand(args: string[], context: CommandContext): Prom
   }
 
   if (subcommand === "get") {
+    const api = createBacktestsApiClient(context);
     const parsed = parseArgs({
       args: args.slice(1),
       options: {

@@ -6,12 +6,21 @@ External CLI client for Trade Nexus v2.
 
 - Consumes Platform API only.
 - Enforces no direct provider API usage.
-- Uses generated SDK for validation run workflows and bot identity/registration flows.
+- Uses generated SDK from the authoritative Platform API OpenAPI contract.
 - Keeps command output automation-friendly.
-- Supports bot self-registration:
-  - invite-code trial path
-  - partner key/secret bootstrap path
-- Supports bot key rotate/revoke lifecycle commands.
+- Contract-backed command groups:
+  - core (`research`, `strategy`, `backtest`, `deploy`, `portfolio`, `order`)
+  - dataset (`dataset ...`)
+  - conversation (`conversation ...`)
+
+## Contract reconciliation status
+
+- Explicit path selected: **B (de-scope CLI commands not covered by authoritative contract)**.
+- De-scoped command groups:
+  - `review-run` / `validation run`
+  - `register` / `key` / `bot`
+  - `shared-validation` / `invite`
+- Operation parity is enforced by `tests/contract/cli-operation-parity.test.ts`.
 
 ## Quick start
 
@@ -43,24 +52,19 @@ Override source explicitly when needed (for CI or alternate local checkout):
 bun run sdk:drift --spec /absolute/path/to/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml
 ```
 
-Note: SDK sync updates generated API/model files from the authoritative contract source and preserves local barrel exports (`index.ts`, `apis/index.ts`, `models/index.ts`) used by current CLI integration.
+Note: SDK sync now performs delete-aware reconciliation, so stale generated APIs/models are removed during regeneration.
 
-## Review Run Commands
-
-```bash
-trading-cli review-run trigger --help
-trading-cli review-run retrieve --help
-trading-cli review-run render --help
-trading-cli validation run trigger --help
-```
-
-## Bot Registration Commands
+## Command groups
 
 ```bash
-trading-cli register invite --help
-trading-cli register partner --help
-trading-cli key rotate --help
-trading-cli key revoke --help
+trading-cli research scan --help
+trading-cli strategy --help
+trading-cli backtest --help
+trading-cli deploy --help
+trading-cli portfolio --help
+trading-cli order --help
+trading-cli dataset --help
+trading-cli conversation --help
 ```
 
 ## Governance docs

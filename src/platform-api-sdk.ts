@@ -8,9 +8,7 @@ import {
   OrdersApi,
   PortfoliosApi,
   ResearchApi,
-  SharedValidationApi,
   StrategiesApi,
-  ValidationApi,
 } from "./generated/trade-nexus-sdk";
 
 export type PlatformApiClientOptions = {
@@ -42,13 +40,6 @@ function createConfiguration(
     accessToken: auth.accessToken,
     apiKey: auth.apiKey,
   });
-}
-
-export function createValidationApiClient(
-  context: CommandContext,
-  options: PlatformApiClientOptions = {},
-): ValidationApi {
-  return new ValidationApi(createConfiguration(context, options));
 }
 
 export function createResearchApiClient(
@@ -98,13 +89,6 @@ export function createDatasetsApiClient(
   options: PlatformApiClientOptions = {},
 ): DatasetsApi {
   return new DatasetsApi(createConfiguration(context, options));
-}
-
-export function createSharedValidationApiClient(
-  context: CommandContext,
-  options: PlatformApiClientOptions = {},
-): SharedValidationApi {
-  return new SharedValidationApi(createConfiguration(context, options));
 }
 
 export function createConversationsApiClient(

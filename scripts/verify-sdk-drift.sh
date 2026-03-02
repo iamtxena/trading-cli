@@ -18,12 +18,22 @@ while [[ $# -gt 0 ]]; do
       GEN_ARGS+=("--spec" "$2")
       shift 2
       ;;
+    --revision)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --revision" >&2
+        exit 1
+      fi
+      GEN_ARGS+=("--revision" "$2")
+      shift 2
+      ;;
     -h|--help)
       cat <<'USAGE'
-Usage: bash scripts/verify-sdk-drift.sh [--spec <path>]
+Usage: bash scripts/verify-sdk-drift.sh [--spec <path>] [--revision <git-ref>]
 
 Options:
-  --spec <path>  OpenAPI contract file to validate drift against.
+  --spec <path>      OpenAPI contract file path used for repository + relative-path resolution.
+  --revision <ref>   Git revision used for authoritative spec content.
+                     Defaults to origin/main (or PLATFORM_API_SPEC_REVISION env var).
 USAGE
       exit 0
       ;;

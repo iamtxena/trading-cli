@@ -22,6 +22,21 @@ Notes:
 - `PLATFORM_API_BASE_URL` must point to `api-nexus.lona.agency` (or local loopback hosts like `http://localhost:3000`).
 - Provider hosts are blocked by CLI boundary checks.
 - `register invite` and `register partner` can run without an auth token.
+- Detailed auth guide: `AUTHENTICATION.md`.
+
+Auth session examples:
+
+```bash
+# login (human token)
+export PLATFORM_API_BEARER_TOKEN="<jwt-access-token>"
+trading-cli health get
+
+# whoami (owner scope check)
+trading-cli bot list
+
+# logout
+unset PLATFORM_API_BEARER_TOKEN PLATFORM_API_TOKEN PLATFORM_API_KEY
+```
 
 ## Global Conventions
 

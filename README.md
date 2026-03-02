@@ -221,5 +221,6 @@ trading-cli shared-validation review-decision \
 - `SECURITY.md`
 - `AGENTS.md`
 - `COMMAND_REFERENCE.md`
+- `AUTHENTICATION.md`
 - `CONFIGURATION.md`
 - `RELEASE_PROCESS.md`

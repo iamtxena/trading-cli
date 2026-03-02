@@ -7,6 +7,9 @@ External CLI client for Trade Nexus v2.
 - Consumes Platform API only.
 - Enforces no direct provider API usage.
 - Uses generated SDK for validation run workflows and bot identity/registration flows.
+- Uses Path A contract-first reconciliation for validation/shared flows:
+  - keep CLI operations that are present in the authoritative OpenAPI contract
+  - regenerate SDK + operationId manifest from the authoritative contract source
 - Keeps command output automation-friendly.
 - Supports bot self-registration:
   - invite-code trial path
@@ -43,7 +46,7 @@ Override source explicitly when needed (for CI or alternate local checkout):
 bun run sdk:drift --spec /absolute/path/to/trade-nexus/docs/architecture/specs/platform-api.openapi.yaml
 ```
 
-Note: SDK sync updates generated API/model files from the authoritative contract source and preserves local barrel exports (`index.ts`, `apis/index.ts`, `models/index.ts`) used by current CLI integration.
+Note: SDK sync updates generated API/model files from the authoritative contract source, removes stale generated files, and preserves local barrel exports (`index.ts`, `apis/index.ts`, `models/index.ts`) used by current CLI integration.
 
 ## Review Run Commands
 

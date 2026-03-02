@@ -1053,6 +1053,10 @@ async function runConversationCommand(args: string[], context: CommandContext): 
 
   if (subcommand === "turn") {
     const action = args[1];
+    if (!action || action === "--help" || action === "-h") {
+      emitConversationHelp(context);
+      return;
+    }
     if (action !== "create") {
       throw new Error("conversation turn supports only 'create'.");
     }

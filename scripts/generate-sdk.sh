@@ -77,11 +77,16 @@ npx --yes "@openapitools/openapi-generator-cli@${GENERATOR_WRAPPER_VERSION}" gen
 
 mkdir -p "${SDK_OUT_DIR}"
 rsync -a \
+  --delete \
   --exclude ".openapi-generator" \
   --exclude ".openapi-generator-ignore" \
   --exclude "index.ts" \
   --exclude "apis/index.ts" \
   --exclude "models/index.ts" \
   "${GEN_OUTPUT_DIR}/" "${SDK_OUT_DIR}/"
+
+node "${SCRIPT_DIR}/extract-openapi-operation-ids.mjs" \
+  --spec "${SPEC_PATH}" \
+  --out "${SDK_OUT_DIR}/operation-ids.json"
 
 echo "Generated vendored SDK at ${SDK_OUT_DIR} using spec ${SPEC_INPUT_PATH}"

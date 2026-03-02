@@ -49,7 +49,7 @@ describe("runCoreCommand unit parsing/output", () => {
   test("backtest export create validates required dataset ids", async () => {
     const fetchMock = (async () => {
       throw new Error("fetch should not be called");
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     const { context } = createContext(fetchMock);
 
     await expect(runCoreCommand(["backtest", "export", "create"], context)).rejects.toThrow(
@@ -60,7 +60,7 @@ describe("runCoreCommand unit parsing/output", () => {
   test("new command help surfaces usage for health/knowledge/backtest export", async () => {
     const fetchMock = (async () => {
       throw new Error("fetch should not be called");
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     const { context, emitted } = createContext(fetchMock);
 
     await runCoreCommand(["health", "--help"], context);
@@ -90,7 +90,10 @@ describe("runCoreCommand unit parsing/output", () => {
       logs.push(String(value));
     };
 
-    const fetchMock = (async (input, init) => {
+    const fetchMock = (async (
+      input: Parameters<typeof fetch>[0],
+      init?: Parameters<typeof fetch>[1],
+    ) => {
       const url = new URL(typeof input === "string" ? input : input.toString());
       const method = init?.method ?? "GET";
       const headers = new Headers(init?.headers);
@@ -120,7 +123,7 @@ describe("runCoreCommand unit parsing/output", () => {
         },
         404,
       );
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const { context } = createContext(fetchMock);
     await runCoreCommand(
@@ -158,7 +161,10 @@ describe("runCoreCommand unit parsing/output", () => {
 
   test("health get emits json payload without auth requirement", async () => {
     const requests: RecordedRequest[] = [];
-    const fetchMock = (async (input, init) => {
+    const fetchMock = (async (
+      input: Parameters<typeof fetch>[0],
+      init?: Parameters<typeof fetch>[1],
+    ) => {
       const url = new URL(typeof input === "string" ? input : input.toString());
       const method = init?.method ?? "GET";
       const headers = new Headers(init?.headers);
@@ -179,7 +185,7 @@ describe("runCoreCommand unit parsing/output", () => {
         },
         404,
       );
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const { context, emitted } = createContext(fetchMock, {});
     await runCoreCommand(["health", "get"], context);

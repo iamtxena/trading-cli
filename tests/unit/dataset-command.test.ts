@@ -45,7 +45,7 @@ describe("runDatasetCommand unit parsing/output", () => {
   test("quality-report usage appears in dataset help output", async () => {
     const fetchMock = (async () => {
       throw new Error("fetch should not be called");
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     const { context, emitted } = createContext(fetchMock);
 
     await runDatasetCommand(["--help"], context);
@@ -60,7 +60,7 @@ describe("runDatasetCommand unit parsing/output", () => {
   test("quality-report validates required dataset id", async () => {
     const fetchMock = (async () => {
       throw new Error("fetch should not be called");
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     const { context } = createContext(fetchMock);
 
     await expect(runDatasetCommand(["quality-report"], context)).rejects.toThrow(
@@ -75,7 +75,10 @@ describe("runDatasetCommand unit parsing/output", () => {
       logs.push(String(value));
     };
 
-    const fetchMock = (async (input, init) => {
+    const fetchMock = (async (
+      input: Parameters<typeof fetch>[0],
+      init?: Parameters<typeof fetch>[1],
+    ) => {
       const url = new URL(typeof input === "string" ? input : input.toString());
       const method = init?.method ?? "GET";
       const headers = new Headers(init?.headers);
@@ -100,7 +103,7 @@ describe("runDatasetCommand unit parsing/output", () => {
         },
         404,
       );
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const { context } = createContext(fetchMock);
     await runDatasetCommand(
@@ -125,7 +128,10 @@ describe("runDatasetCommand unit parsing/output", () => {
   });
 
   test("quality-report emits json payload by default", async () => {
-    const fetchMock = (async (input, init) => {
+    const fetchMock = (async (
+      input: Parameters<typeof fetch>[0],
+      init?: Parameters<typeof fetch>[1],
+    ) => {
       const url = new URL(typeof input === "string" ? input : input.toString());
       const method = init?.method ?? "GET";
 
@@ -148,7 +154,7 @@ describe("runDatasetCommand unit parsing/output", () => {
         },
         404,
       );
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const { context, emitted } = createContext(fetchMock);
     await runDatasetCommand(["quality-report", "--dataset-id", "dataset-001"], context);

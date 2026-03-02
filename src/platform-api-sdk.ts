@@ -3,8 +3,11 @@ import {
   BacktestsApi,
   Configuration,
   ConversationsApi,
+  DataApi,
   DatasetsApi,
   DeploymentsApi,
+  HealthApi,
+  KnowledgeApi,
   OrdersApi,
   PortfoliosApi,
   ResearchApi,
@@ -100,6 +103,13 @@ export function createDatasetsApiClient(
   return new DatasetsApi(createConfiguration(context, options));
 }
 
+export function createDataApiClient(
+  context: CommandContext,
+  options: PlatformApiClientOptions = {},
+): DataApi {
+  return new DataApi(createConfiguration(context, options));
+}
+
 export function createSharedValidationApiClient(
   context: CommandContext,
   options: PlatformApiClientOptions = {},
@@ -112,4 +122,18 @@ export function createConversationsApiClient(
   options: PlatformApiClientOptions = {},
 ): ConversationsApi {
   return new ConversationsApi(createConfiguration(context, options));
+}
+
+export function createKnowledgeApiClient(
+  context: CommandContext,
+  options: PlatformApiClientOptions = {},
+): KnowledgeApi {
+  return new KnowledgeApi(createConfiguration(context, options));
+}
+
+export function createHealthApiClient(
+  context: CommandContext,
+  options: PlatformApiClientOptions = {},
+): HealthApi {
+  return new HealthApi(createConfiguration(context, options));
 }

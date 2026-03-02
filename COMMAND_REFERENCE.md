@@ -61,6 +61,40 @@ trading-cli research scan \
   --output table
 ```
 
+### health
+
+#### `health get`
+Reads platform health status.
+
+```bash
+trading-cli health get [--output json|table]
+```
+
+### knowledge
+
+#### `knowledge search`
+```bash
+trading-cli knowledge search --query <text> [--assets <csv>] [--limit <int>] [--request-id <id>] [--output json|table]
+trading-cli knowledge search --input <knowledge-search.json> [--request-id <id>] [--output json|table]
+```
+
+#### `knowledge patterns`
+```bash
+trading-cli knowledge patterns [--type <pattern-type>] [--asset <asset>] [--limit <int>] [--request-id <id>] [--output json|table]
+```
+
+#### `knowledge regime`
+```bash
+trading-cli knowledge regime --asset <asset> [--request-id <id>] [--output json|table]
+```
+
+Example:
+```bash
+trading-cli knowledge search --query "momentum breakout" --assets btc,eth --limit 10
+trading-cli knowledge patterns --type momentum --asset btc --limit 20
+trading-cli knowledge regime --asset btc
+```
+
 ### strategy
 
 #### `strategy create`
@@ -111,6 +145,17 @@ trading-cli backtest create --strategy-id <id> --input <create-backtest.json> [-
 trading-cli backtest get --backtest-id <id> [--request-id <id>] [--output json|table]
 ```
 
+#### `backtest export create`
+```bash
+trading-cli backtest export create --dataset-ids <csv> [--asset-classes <csv>] [--request-id <id>] [--output json|table]
+trading-cli backtest export create --input <backtest-export.json> [--request-id <id>] [--output json|table]
+```
+
+#### `backtest export get`
+```bash
+trading-cli backtest export get --export-id <id> [--request-id <id>] [--output json|table]
+```
+
 Example:
 ```bash
 trading-cli backtest create \
@@ -119,6 +164,9 @@ trading-cli backtest create \
   --end-date 2025-03-01 \
   --dataset-ids dataset-btc-1h-2025 \
   --initial-cash 10000
+
+trading-cli backtest export create --dataset-ids dataset-btc-1h-2025 --asset-classes crypto
+trading-cli backtest export get --export-id export-001
 ```
 
 ### deploy
@@ -247,6 +295,11 @@ trading-cli dataset get --dataset-id <id> [--request-id <id>] [--output json|tab
 trading-cli dataset status --dataset-id <id> [--request-id <id>] [--output json|table]
 ```
 
+#### `dataset quality-report`
+```bash
+trading-cli dataset quality-report --dataset-id <id> [--request-id <id>] [--output json|table]
+```
+
 #### `dataset list`
 ```bash
 trading-cli dataset list [--cursor <token>] [--request-id <id>] [--output json|table]
@@ -268,6 +321,7 @@ trading-cli dataset validate --dataset-id dataset-001 --column-mapping-json '{"t
 trading-cli dataset transform --dataset-id dataset-001 --frequency 1h
 trading-cli dataset publish --dataset-id dataset-001 --mode explicit
 trading-cli dataset status --dataset-id dataset-001
+trading-cli dataset quality-report --dataset-id dataset-001
 ```
 
 ### validation / review-run

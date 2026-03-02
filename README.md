@@ -85,6 +85,35 @@ trading-cli key rotate --help
 trading-cli key revoke --help
 ```
 
+## Core/Data Commands
+
+```bash
+trading-cli health get --help
+trading-cli knowledge search --help
+trading-cli knowledge patterns --help
+trading-cli knowledge regime --help
+trading-cli backtest export --help
+trading-cli dataset quality-report --help
+```
+
+Examples:
+
+```bash
+trading-cli health get
+
+trading-cli knowledge search --query "momentum breakout" --assets btc,eth --limit 10
+
+trading-cli knowledge patterns --type momentum --asset btc --limit 20
+
+trading-cli knowledge regime --asset btc
+
+trading-cli backtest export create --dataset-ids dataset-btc-1h-2025 --asset-classes crypto
+
+trading-cli backtest export get --export-id export-001
+
+trading-cli dataset quality-report --dataset-id dataset-btc-1h-2025
+```
+
 ## Workflow playbooks
 
 ### 1. Strategy lifecycle (scan -> create -> backtest -> deploy paper/live)

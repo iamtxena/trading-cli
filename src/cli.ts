@@ -114,14 +114,16 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
         "key rotate",
         "key revoke",
         "bot list",
+        "health get",
         "research scan",
+        "knowledge search|patterns|regime",
         "strategy create|get|list|update",
-        "backtest create|get",
+        "backtest create|get|export create|export get",
         "deploy create|get|list|stop",
         "portfolio list|get",
         "order create|get|list|cancel",
         "dataset upload init|complete",
-        "dataset validate|transform|publish|get|status|list",
+        "dataset validate|transform|publish|get|status|list|quality-report",
         "shared-validation shared-with-me|run|artifact|review-comment|review-decision",
         "invite create|list|accept|revoke",
         "conversation session create|get",
@@ -160,7 +162,9 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
     }
 
     if (
+      args[0] === "health" ||
       args[0] === "research" ||
+      args[0] === "knowledge" ||
       args[0] === "strategy" ||
       args[0] === "backtest" ||
       args[0] === "deploy" ||
@@ -190,7 +194,7 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
       status: "error",
       message:
         `Unknown command '${args[0]}'. Use 'review-run', 'validation run', ` +
-        "'register', 'key', 'bot', 'research', 'strategy', 'backtest', " +
+        "'register', 'key', 'bot', 'health', 'research', 'knowledge', 'strategy', 'backtest', " +
         "'deploy', 'portfolio', 'order', 'dataset', 'shared-validation', " +
         "'invite', or 'conversation'.",
       command: args,

@@ -77,6 +77,106 @@ trading-cli key rotate --help
 trading-cli key revoke --help
 ```
 
+## Workflow playbooks
+
+### 1. Strategy lifecycle (scan -> create -> backtest -> deploy paper/live)
+
+```bash
+# 1) Scan market context and ideas
+trading-cli research scan \
+  --asset-classes crypto,stocks \
+  --capital 50000 \
+  --version v2 \
+  --output table
+
+# 2) Create strategy
+trading-cli strategy create \
+  --name "BTC Breakout v1" \
+  --description "1h breakout with trend confirmation"
+
+# 3) Backtest
+STRATEGY_ID="strat-001" # replace with your strategy id
+trading-cli backtest create \
+  --strategy-id "$STRATEGY_ID" \
+  --start-date 2025-01-01 \
+  --end-date 2025-03-01 \
+  --dataset-ids dataset-btc-1h-2025 \
+  --initial-cash 10000
+
+BACKTEST_ID="backtest-001" # replace with your backtest id
+trading-cli backtest get --backtest-id "$BACKTEST_ID" --output table
+
+# 4) Deploy paper first, then live
+trading-cli deploy create --strategy-id "$STRATEGY_ID" --mode paper --capital 10000
+trading-cli deploy create --strategy-id "$STRATEGY_ID" --mode live --capital 10000
+```
+
+### 2. Validation lifecycle (trigger -> review -> verdict -> render)
+
+```bash
+# 1) Trigger validation run
+trading-cli review-run trigger \
+  --strategy-id strat-001 \
+  --requested-indicators ema,zigzag \
+  --dataset-ids dataset-btc-1h-2025 \
+  --backtest-report-ref blob://validation/candidate/backtest.json
+
+RUN_ID="valrun-20260220-0001" # replace with returned run id
+
+# 2) Review summary + raw artifact state
+trading-cli review-run retrieve --run-id "$RUN_ID" --raw
+
+# 3) Record review verdict (for reviewers with shared review permission)
+trading-cli shared-validation review-comment \
+  --run-id "$RUN_ID" \
+  --body "Risk checks complete. Ready for verdict."
+
+trading-cli shared-validation review-decision \
+  --run-id "$RUN_ID" \
+  --action approve \
+  --decision conditional_pass \
+  --reason "Meets guardrails with minor follow-up."
+
+# 4) Render final review artifact and check status
+trading-cli review-run render --run-id "$RUN_ID" --format pdf
+trading-cli review-run retrieve --run-id "$RUN_ID" --render-format pdf
+```
+
+### 3. Shared review lifecycle (invite -> shared-with-me -> comment/decision)
+
+```bash
+# Owner invites reviewer
+RUN_ID="run-001"
+trading-cli invite create \
+  --run-id "$RUN_ID" \
+  --email reviewer@example.com \
+  --permission review \
+  --message "Please review today."
+
+# Reviewer accepts invite
+INVITE_ID="invite-001"
+trading-cli invite accept \
+  --invite-id "$INVITE_ID" \
+  --accepted-email reviewer@example.com
+
+# Reviewer lists runs shared with them
+trading-cli shared-validation shared-with-me \
+  --permission review \
+  --status completed \
+  --output table
+
+# Reviewer leaves comment and decision
+trading-cli shared-validation review-comment \
+  --run-id "$RUN_ID" \
+  --body "LGTM after evidence review."
+
+trading-cli shared-validation review-decision \
+  --run-id "$RUN_ID" \
+  --action approve \
+  --decision pass \
+  --reason "All required checks passed."
+```
+
 ## Governance docs
 
 - `CONTRIBUTING.md`

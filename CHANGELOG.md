@@ -2,6 +2,13 @@
 
 All notable changes to `trading-cli` will be documented in this file.
 
+## v0.1.2
+
+- Add CLI parity commands for health, dataset quality, knowledge search/list/regime, backtest export create/get.
+- Add CLI parity commands for validation shared/advanced flows (bots list, runs list, review submit/comment/decision, baseline, replay regression).
+- Complete command reference/playbooks and resolve parity review follow-ups (#41, #42).
+- Lazy-initialize backtest export client path to remove remaining review thread concern.
+
 ## v0.1.1
 
 - Migrate release workflow to npm Trusted Publishing via OIDC (no token required).

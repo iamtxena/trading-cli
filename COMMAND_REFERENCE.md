@@ -93,6 +93,16 @@ Example:
 trading-cli knowledge search --query "momentum breakout" --assets btc,eth --limit 10
 trading-cli knowledge patterns --type momentum --asset btc --limit 20
 trading-cli knowledge regime --asset btc
+
+cat > /tmp/knowledge-search.json <<'JSON'
+{
+  "query": "range breakout",
+  "assets": ["btc", "eth"],
+  "limit": 5
+}
+JSON
+
+trading-cli knowledge search --input /tmp/knowledge-search.json
 ```
 
 ### strategy
@@ -167,6 +177,15 @@ trading-cli backtest create \
 
 trading-cli backtest export create --dataset-ids dataset-btc-1h-2025 --asset-classes crypto
 trading-cli backtest export get --export-id export-001
+
+cat > /tmp/backtest-export.json <<'JSON'
+{
+  "datasetIds": ["dataset-btc-1h-2025", "dataset-eth-1h-2025"],
+  "assetClasses": ["crypto"]
+}
+JSON
+
+trading-cli backtest export create --input /tmp/backtest-export.json
 ```
 
 ### deploy
@@ -563,20 +582,11 @@ trading-cli conversation session get --session-id session-001
 trading-cli conversation turn create --session-id session-001 --role user --message "hello"
 ```
 
-## After CLI-A: knowledge / data-export
+## Knowledge and Export Status
 
-The generated SDK already contains `KnowledgeApi` and `DataApi` operations, but this CLI build does not expose command groups for them yet.
-
-Current behavior:
-```bash
-trading-cli knowledge
-trading-cli data-export
-# Both currently fail with: Unknown command ...
-```
-
-Interim guidance:
-- Use `research scan --version v2` for embedded `knowledgeEvidence` in scan output.
-- Use existing `backtest get` / `review-run retrieve --raw` artifacts until `data-export` commands are added.
+- `knowledge` command group is exposed and supported (`search`, `patterns`, `regime`).
+- Backtest data export is exposed under `backtest export create|get`.
+- There is currently no top-level `data-export` command group; use `backtest export` commands for data export workflows.
 
 ## Output and Errors
 

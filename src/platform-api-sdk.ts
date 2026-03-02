@@ -1,4 +1,5 @@
 import { type CommandContext, nonEmpty, trimTrailingSlash } from "./command-utils";
+import { loadStoredCliCredential } from "./credential-store";
 import {
   BacktestsApi,
   Configuration,
@@ -20,9 +21,14 @@ export type PlatformApiClientOptions = {
   requireAuth?: boolean;
 };
 
-function resolveAuth(env: NodeJS.ProcessEnv): { accessToken?: string; apiKey?: string } {
-  const accessToken = nonEmpty(env.PLATFORM_API_BEARER_TOKEN) ?? nonEmpty(env.PLATFORM_API_TOKEN);
-  const apiKey = nonEmpty(env.PLATFORM_API_KEY);
+function resolveAuth(context: CommandContext): { accessToken?: string; apiKey?: string } {
+  const envAccessToken =
+    nonEmpty(context.env.PLATFORM_API_BEARER_TOKEN) ?? nonEmpty(context.env.PLATFORM_API_TOKEN);
+  const storedCredential = envAccessToken
+    ? undefined
+    : loadStoredCliCredential(context.baseUrl, context.env);
+  const accessToken = envAccessToken ?? storedCredential?.accessToken;
+  const apiKey = nonEmpty(context.env.PLATFORM_API_KEY);
   return { accessToken, apiKey };
 }
 
@@ -31,7 +37,7 @@ function createConfiguration(
   options: PlatformApiClientOptions = {},
 ): Configuration {
   const { requireAuth = true } = options;
-  const auth = resolveAuth(context.env);
+  const auth = resolveAuth(context);
 
   if (requireAuth && !auth.accessToken && !auth.apiKey) {
     throw new Error(

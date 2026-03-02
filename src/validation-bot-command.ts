@@ -6,12 +6,14 @@ import {
   deriveRequestId,
   nonEmpty,
   parseJsonFile,
+  toSerializable,
 } from "./command-utils";
 import { createValidationApiClient } from "./validation-api-client";
 import {
   type Bot,
   type BotKeyMetadata,
   type BotRegistration,
+  type BotSummary,
   type CreateBotInviteRegistrationRequest,
   type CreateBotPartnerBootstrapRequest,
 } from "./generated/trade-nexus-sdk";
@@ -134,6 +136,10 @@ function summarizeKey(key: BotKeyMetadata) {
     lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
     revokedAt: key.revokedAt?.toISOString() ?? null,
   };
+}
+
+function summarizeBotSummary(bot: BotSummary) {
+  return toSerializable(bot) as Record<string, unknown>;
 }
 
 async function runRegisterInviteCommand(args: string[], context: CommandContext): Promise<void> {
@@ -337,6 +343,34 @@ async function runRevokeKeyCommand(args: string[], context: CommandContext): Pro
   });
 }
 
+async function runListBotsCommand(args: string[], context: CommandContext): Promise<void> {
+  const parsed = parseArgs({
+    args,
+    options: {
+      "request-id": { type: "string" },
+    },
+    allowPositionals: false,
+    strict: true,
+  });
+
+  const requestId = deriveRequestId(
+    VALIDATION_BOT_REQUEST_ID_PREFIX,
+    nonEmpty(parsed.values["request-id"]),
+  );
+  const api = createValidationApiClient(context);
+  const response = await api.listValidationBotsV2({
+    xRequestId: requestId,
+  });
+
+  context.emit({
+    status: "ok",
+    command: "bot list",
+    requestId: response.requestId,
+    bots: response.bots.map((bot) => summarizeBotSummary(bot)),
+    count: response.bots.length,
+  });
+}
+
 function emitUsage(context: CommandContext): void {
   context.emit({
     status: "ok",
@@ -346,6 +380,7 @@ function emitUsage(context: CommandContext): void {
       "trading-cli register partner --partner-key <key> --partner-secret <secret> --owner-email <email> --bot-name <name>",
       "trading-cli key rotate --bot-id <botId> [--reason <text>]",
       "trading-cli key revoke --bot-id <botId> --key-id <keyId> [--reason <text>]",
+      "trading-cli bot list",
       "trading-cli bot register invite --invite-code <code> --bot-name <name>",
       "trading-cli bot register partner --partner-key <key> --partner-secret <secret> --owner-email <email> --bot-name <name>",
       "trading-cli bot key rotate --bot-id <botId> [--reason <text>]",
@@ -427,5 +462,10 @@ export async function runValidationBotCommand(args: string[], context: CommandCo
     throw new Error(`Unknown key action '${action}'. Use 'rotate' or 'revoke'.`);
   }
 
-  throw new Error(`Unknown bot command '${root}'. Use 'register' or 'key'.`);
+  if (root === "list") {
+    await runListBotsCommand(args.slice(1), context);
+    return;
+  }
+
+  throw new Error(`Unknown bot command '${root}'. Use 'register', 'key', or 'list'.`);
 }

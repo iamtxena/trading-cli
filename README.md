@@ -64,13 +64,21 @@ Note: SDK sync updates generated API/model files from the authoritative contract
 ```bash
 trading-cli review-run trigger --help
 trading-cli review-run retrieve --help
+trading-cli review-run list --help
 trading-cli review-run render --help
+trading-cli review-run review --help
+trading-cli review-run review-comment --help
+trading-cli review-run review-decision --help
+trading-cli review-run baseline --help
+trading-cli review-run replay --help
 trading-cli validation run trigger --help
+trading-cli validation run list --help
 ```
 
 ## Bot Registration Commands
 
 ```bash
+trading-cli bot list --help
 trading-cli register invite --help
 trading-cli register partner --help
 trading-cli key rotate --help

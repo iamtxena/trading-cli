@@ -366,6 +366,97 @@ describe("bot registration and key lifecycle commands", () => {
     expect(keyPayload.usage).toContain("trading-cli key rotate --bot-id <botId> [--reason <text>]");
   });
 
+  test("bot list maps to validation bot registry endpoint and emits deterministic json", async () => {
+    const logs: string[] = [];
+    let authHeader: string | null = null;
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-bot-list-001";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+      authHeader = new Headers(init?.headers).get("Authorization");
+
+      if (url.pathname === "/v2/validation-bots" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-bot-list-001",
+          bots: [
+            {
+              id: "bot-001",
+              tenantId: "tenant-001",
+              ownerUserId: "user-001",
+              name: "Momentum Guard Bot",
+              status: "active",
+              registrationPath: "invite_code_trial",
+              trialExpiresAt: "2026-03-20T10:30:00Z",
+              metadata: { runtime: "openclaw" },
+              createdAt: "2026-02-20T10:30:00Z",
+              updatedAt: "2026-02-20T12:00:00Z",
+              keys: [
+                {
+                  id: "botkey-001",
+                  botId: "bot-001",
+                  keyPrefix: "tnx.bot.bot-001.",
+                  status: "active",
+                  createdAt: "2026-02-20T12:00:00Z",
+                  lastUsedAt: "2026-02-20T12:05:00Z",
+                  revokedAt: null,
+                },
+              ],
+              usage: {
+                lastSeenAt: "2026-02-20T12:05:00Z",
+              },
+            },
+          ],
+        });
+      }
+
+      return jsonResponse(
+        {
+          error: { code: "not_found", message: `Unexpected request: ${method} ${url.pathname}` },
+          requestId: "req-unexpected",
+        },
+        404,
+      );
+    }) as typeof fetch;
+
+    const exitCode = await run(["bun", "src/cli.ts", "bot", "list"], fetchMock);
+    expect(exitCode).toBe(0);
+    expect(authHeader === "Bearer token-bot-list-001").toBe(true);
+
+    const payload = JSON.parse(logs.at(-1) ?? "{}") as {
+      command: string;
+      count: number;
+      requestId: string;
+      bots: Array<{ createdAt: string; keys: Array<{ createdAt: string }> }>;
+    };
+    expect(payload.command).toBe("bot list");
+    expect(payload.requestId).toBe("req-bot-list-001");
+    expect(payload.count).toBe(1);
+    expect(payload.bots[0]?.createdAt).toBe("2026-02-20T10:30:00.000Z");
+    expect(payload.bots[0]?.keys[0]?.createdAt).toBe("2026-02-20T12:00:00.000Z");
+  });
+
+  test("bot list rejects unsupported options with strict parser error", async () => {
+    const errors: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-bot-list-002";
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    const exitCode = await run(["bun", "src/cli.ts", "bot", "list", "--output", "table"]);
+    expect(exitCode).toBe(1);
+
+    const payload = JSON.parse(errors.at(-1) ?? "{}") as { message: string };
+    expect(payload.message).toContain("Unknown option '--output'");
+  });
+
   test("missing register/key subcommands return explicit guidance", async () => {
     const errors: string[] = [];
     process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";

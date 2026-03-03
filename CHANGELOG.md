@@ -2,6 +2,15 @@
 
 All notable changes to `trading-cli` will be documented in this file.
 
+## v0.1.4
+
+- Add mandatory root help support: `trading-cli --help` and `trading-cli -h`.
+- Add mandatory auth leaf help support:
+  - `trading-cli auth login --help`
+  - `trading-cli auth whoami --help`
+  - `trading-cli auth logout --help`
+- Add smoke coverage to lock agent-oriented help discovery behavior.
+
 ## v0.1.3
 
 - Add production CLI auth command group: `auth login`, `auth whoami`, `auth logout`.

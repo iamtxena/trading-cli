@@ -2,6 +2,13 @@
 
 All notable changes to `trading-cli` will be documented in this file.
 
+## v0.1.3
+
+- Add production CLI auth command group: `auth login`, `auth whoami`, `auth logout`.
+- Add secure credential storage + fallback behavior for local auth sessions.
+- Harden credential-store failure handling and secure-store toggle consistency.
+- Improve auth-required messaging to include `auth login` guidance.
+
 ## v0.1.2
 
 - Add CLI parity commands for health, dataset quality, knowledge search/list/regime, backtest export create/get.

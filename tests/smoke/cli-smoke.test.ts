@@ -3,6 +3,40 @@ import { describe, expect, test } from "bun:test";
 import { run } from "../../src/cli";
 
 describe("CLI smoke", () => {
+  test("supports top-level --help for agent-friendly discovery", async () => {
+    const originalBaseUrl = process.env.PLATFORM_API_BASE_URL;
+    const originalLog = console.log;
+    const logs: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    try {
+      const exitCode = await run(["bun", "src/cli.ts", "--help"]);
+      expect(exitCode).toBe(0);
+      expect(logs.length).toBe(1);
+
+      const payload = JSON.parse(logs[0]) as {
+        status: string;
+        commands: string[];
+        usage: string[];
+      };
+      expect(payload.status).toBe("ok");
+      expect(payload.usage).toContain("trading-cli --help");
+      expect(payload.commands).toContain("auth login");
+      expect(payload.commands).toContain("strategy create|get|list|update");
+    } finally {
+      if (originalBaseUrl === undefined) {
+        delete process.env.PLATFORM_API_BASE_URL;
+      } else {
+        process.env.PLATFORM_API_BASE_URL = originalBaseUrl;
+      }
+      console.log = originalLog;
+    }
+  });
+
   test("fails unknown command path with structured machine-readable error", async () => {
     const originalBaseUrl = process.env.PLATFORM_API_BASE_URL;
     const originalLog = console.log;

@@ -41,6 +41,49 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function emitRootUsage(baseUrl: string): void {
+  emitJson({
+    status: "ok",
+    message: "trading-cli ready",
+    target: baseUrl,
+    usage: ["trading-cli <command> [subcommand] [flags]", "trading-cli --help"],
+    commands: [
+      "review-run trigger",
+      "review-run retrieve",
+      "review-run list",
+      "review-run render",
+      "review-run review",
+      "review-run review-comment",
+      "review-run review-decision",
+      "review-run baseline",
+      "review-run replay",
+      "validation run <trigger|retrieve|list|render|review|review-comment|review-decision|baseline|replay>",
+      "register invite",
+      "register partner",
+      "key rotate",
+      "key revoke",
+      "bot list",
+      "auth login",
+      "auth whoami",
+      "auth logout",
+      "health get",
+      "research scan",
+      "knowledge search|patterns|regime",
+      "strategy create|get|list|update",
+      "backtest create|get|export create|export get",
+      "deploy create|get|list|stop",
+      "portfolio list|get",
+      "order create|get|list|cancel",
+      "dataset upload init|complete",
+      "dataset validate|transform|publish|get|status|list|quality-report",
+      "shared-validation shared-with-me|run|artifact|review-comment|review-decision",
+      "invite create|list|accept|revoke",
+      "conversation session create|get",
+      "conversation turn create",
+    ],
+  });
+}
+
 export function assertPlatformApiBaseUrl(url: string): void {
   const normalized = url.trim();
 
@@ -94,46 +137,8 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
   }
 
   const args = argv.slice(2);
-  if (args.length === 0) {
-    emitJson({
-      status: "ok",
-      message: "trading-cli ready",
-      target: baseUrl,
-      commands: [
-        "review-run trigger",
-        "review-run retrieve",
-        "review-run list",
-        "review-run render",
-        "review-run review",
-        "review-run review-comment",
-        "review-run review-decision",
-        "review-run baseline",
-        "review-run replay",
-        "validation run <trigger|retrieve|list|render|review|review-comment|review-decision|baseline|replay>",
-        "register invite",
-        "register partner",
-        "key rotate",
-        "key revoke",
-        "bot list",
-        "auth login",
-        "auth whoami",
-        "auth logout",
-        "health get",
-        "research scan",
-        "knowledge search|patterns|regime",
-        "strategy create|get|list|update",
-        "backtest create|get|export create|export get",
-        "deploy create|get|list|stop",
-        "portfolio list|get",
-        "order create|get|list|cancel",
-        "dataset upload init|complete",
-        "dataset validate|transform|publish|get|status|list|quality-report",
-        "shared-validation shared-with-me|run|artifact|review-comment|review-decision",
-        "invite create|list|accept|revoke",
-        "conversation session create|get",
-        "conversation turn create",
-      ],
-    });
+  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+    emitRootUsage(baseUrl);
     return 0;
   }
 

@@ -55,17 +55,22 @@ afterEach(() => {
 });
 
 describe("auth commands", () => {
-  test("auth commands support --help without requiring auth", async () => {
+  test("auth commands support --help without requiring auth or valid API endpoint", async () => {
     const logs: string[] = [];
-    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    const errors: string[] = [];
+    process.env.PLATFORM_API_BASE_URL = "https://api.binance.com";
     console.log = (value: unknown) => {
       logs.push(String(value));
+    };
+    console.error = (value: unknown) => {
+      errors.push(String(value));
     };
 
     expect(await run(["bun", "src/cli.ts", "auth", "--help"])).toBe(0);
     expect(await run(["bun", "src/cli.ts", "auth", "login", "--help"])).toBe(0);
     expect(await run(["bun", "src/cli.ts", "auth", "whoami", "--help"])).toBe(0);
     expect(await run(["bun", "src/cli.ts", "auth", "logout", "--help"])).toBe(0);
+    expect(errors.length).toBe(0);
 
     const parsed = logs.map((line) => JSON.parse(line) as { command?: string; usage?: string[] });
     expect(parsed[0]?.command).toBe("auth");

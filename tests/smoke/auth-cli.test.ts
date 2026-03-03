@@ -150,6 +150,76 @@ describe("auth commands", () => {
     rmSync(store.dir, { force: true, recursive: true });
   });
 
+  test("auth login surfaces storage failure guidance when credential persistence fails", async () => {
+    const errors: string[] = [];
+    const store = createAuthStorePath();
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.TRADING_CLI_ENABLE_AUTH_STORE = "1";
+    process.env.TRADING_CLI_AUTH_SECURE_STORE = "0";
+    process.env.TRADING_CLI_AUTH_FALLBACK_PATH = store.dir;
+
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+
+      if (url.pathname === "/v2/validation-cli-auth/device/start" && method === "POST") {
+        return jsonResponse(
+          {
+            requestId: "req-cli-device-start-002",
+            deviceCode: "tnx_device_002",
+            userCode: "X2Q1-8PZZ",
+            verificationUri: "https://trade-nexus.local/cli/device",
+            verificationUriComplete:
+              "https://trade-nexus.local/cli/device?user_code=X2Q1-8PZZ",
+            scopes: ["validation:read", "validation:write"],
+            expiresAt: "2026-03-02T12:40:00Z",
+            expiresIn: 900,
+            interval: 1,
+          },
+          201,
+        );
+      }
+
+      if (url.pathname === "/v2/validation-cli-auth/device/token" && method === "POST") {
+        return jsonResponse({
+          requestId: "req-cli-device-token-002",
+          tokenType: "Bearer",
+          accessToken: "tnx.cli.clisess-000002.secret-value",
+          sessionId: "clisess-000002",
+          tenantId: "tenant-001",
+          userId: "user-001",
+          createdByUserId: "user-001",
+          scopes: ["validation:read", "validation:write"],
+          createdAt: "2026-03-02T12:33:00Z",
+          expiresAt: "2026-03-02T13:33:00Z",
+          expiresIn: 3600,
+        });
+      }
+
+      return jsonResponse({ error: { code: "not_found", message: "Unexpected request" } }, 404);
+    }) as typeof fetch;
+
+    const exitCode = await run(["bun", "src/cli.ts", "auth", "login"], fetchMock);
+    expect(exitCode).toBe(1);
+
+    const payload = JSON.parse(errors.at(-1) ?? "{}") as {
+      status: string;
+      message: string;
+    };
+    expect(payload.status).toBe("error");
+    expect(payload.message).toContain("login succeeded but credential storage failed");
+    expect(payload.message).toContain("`trading-cli auth login`");
+    expect(payload.message).toContain("requestId: req-cli-device-token-002");
+    expect(payload.message).not.toContain("tnx.cli.clisess-000002.secret-value");
+
+    rmSync(store.dir, { force: true, recursive: true });
+  });
+
   test("auth whoami uses stored credential when env token is absent", async () => {
     const logs: string[] = [];
     const headers: string[] = [];

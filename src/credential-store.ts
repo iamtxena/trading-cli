@@ -304,7 +304,11 @@ function writeToSecureStore(
   return undefined;
 }
 
-function clearSecureStore(target: string): void {
+function clearSecureStore(target: string, env: NodeJS.ProcessEnv): void {
+  if (!isSecureStoreEnabled(env)) {
+    return;
+  }
+
   if (process.platform === "darwin") {
     clearMacosKeychain(target);
     return;
@@ -434,6 +438,6 @@ export function clearStoredCliCredential(
   env: NodeJS.ProcessEnv = process.env,
 ): void {
   const target = resolveCredentialTarget(baseUrl);
-  clearSecureStore(target);
+  clearSecureStore(target, env);
   clearFallbackFile(target, env);
 }

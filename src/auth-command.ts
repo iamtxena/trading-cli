@@ -227,20 +227,32 @@ async function runAuthLoginCommand(args: string[], context: CommandContext): Pro
     throw new Error(`Device authorization timed out after ${resolvedTimeoutSeconds} seconds.`);
   }
 
-  const storageBackend = saveStoredCliCredential(
-    context.baseUrl,
-    {
-      accessToken: tokenIssued.accessToken,
-      sessionId: tokenIssued.sessionId,
-      tenantId: tokenIssued.tenantId,
-      userId: tokenIssued.userId,
-      createdByUserId: tokenIssued.createdByUserId,
-      scopes: tokenIssued.scopes,
-      createdAt: tokenIssued.createdAt.toISOString(),
-      expiresAt: tokenIssued.expiresAt.toISOString(),
-    },
-    context.env,
-  );
+  let storageBackend: ReturnType<typeof saveStoredCliCredential>;
+  try {
+    storageBackend = saveStoredCliCredential(
+      context.baseUrl,
+      {
+        accessToken: tokenIssued.accessToken,
+        sessionId: tokenIssued.sessionId,
+        tenantId: tokenIssued.tenantId,
+        userId: tokenIssued.userId,
+        createdByUserId: tokenIssued.createdByUserId,
+        scopes: tokenIssued.scopes,
+        createdAt: tokenIssued.createdAt.toISOString(),
+        expiresAt: tokenIssued.expiresAt.toISOString(),
+      },
+      context.env,
+    );
+  } catch (error) {
+    const details = error instanceof Error ? ` Details: ${error.message}` : "";
+    throw new Error(
+      formatErrorMessage(
+        "login succeeded but credential storage failed. Re-run `trading-cli auth login` after fixing local credential storage configuration or permissions." +
+          details,
+        tokenIssued.requestId,
+      ),
+    );
+  }
 
   context.emit({
     status: "ok",

@@ -55,6 +55,26 @@ afterEach(() => {
 });
 
 describe("auth commands", () => {
+  test("auth commands support --help without requiring auth", async () => {
+    const logs: string[] = [];
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "auth", "--help"])).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "auth", "login", "--help"])).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "auth", "whoami", "--help"])).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "auth", "logout", "--help"])).toBe(0);
+
+    const parsed = logs.map((line) => JSON.parse(line) as { command?: string; usage?: string[] });
+    expect(parsed[0]?.command).toBe("auth");
+    expect(parsed[1]?.command).toBe("auth login");
+    expect(parsed[2]?.command).toBe("auth whoami");
+    expect(parsed[3]?.command).toBe("auth logout");
+    expect(parsed[1]?.usage?.[0]).toContain("trading-cli auth login");
+  });
+
   test("auth login completes device flow and stores token without printing secrets", async () => {
     const logs: string[] = [];
     const errors: string[] = [];

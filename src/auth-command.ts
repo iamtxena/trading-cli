@@ -126,7 +126,42 @@ function emitAuthUsage(context: CommandContext): void {
   });
 }
 
+function hasHelpFlag(args: string[]): boolean {
+  return args.includes("--help") || args.includes("-h");
+}
+
+function emitAuthLoginUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "auth login",
+    usage: [
+      "trading-cli auth login [--scopes validation:read,validation:write] [--timeout-seconds <seconds>] [--poll-interval-seconds <seconds>] [--request-id <id>]",
+    ],
+  });
+}
+
+function emitAuthWhoamiUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "auth whoami",
+    usage: ["trading-cli auth whoami [--request-id <id>]"],
+  });
+}
+
+function emitAuthLogoutUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "auth logout",
+    usage: ["trading-cli auth logout [--request-id <id>]"],
+  });
+}
+
 async function runAuthLoginCommand(args: string[], context: CommandContext): Promise<void> {
+  if (hasHelpFlag(args)) {
+    emitAuthLoginUsage(context);
+    return;
+  }
+
   const parsed = parseArgs({
     args,
     options: {
@@ -273,6 +308,11 @@ async function runAuthLoginCommand(args: string[], context: CommandContext): Pro
 }
 
 async function runAuthWhoamiCommand(args: string[], context: CommandContext): Promise<void> {
+  if (hasHelpFlag(args)) {
+    emitAuthWhoamiUsage(context);
+    return;
+  }
+
   const parsed = parseArgs({
     args,
     options: {
@@ -305,6 +345,11 @@ async function runAuthWhoamiCommand(args: string[], context: CommandContext): Pr
 }
 
 async function runAuthLogoutCommand(args: string[], context: CommandContext): Promise<void> {
+  if (hasHelpFlag(args)) {
+    emitAuthLogoutUsage(context);
+    return;
+  }
+
   const parsed = parseArgs({
     args,
     options: {

@@ -41,7 +41,7 @@ function createConfiguration(
 
   if (requireAuth && !auth.accessToken && !auth.apiKey) {
     throw new Error(
-      "Authentication required: set PLATFORM_API_BEARER_TOKEN (preferred) or PLATFORM_API_KEY.",
+      "Authentication required: run `trading-cli auth login` for human CLI access, or set PLATFORM_API_BEARER_TOKEN (preferred) / PLATFORM_API_KEY for automation.",
     );
   }
 

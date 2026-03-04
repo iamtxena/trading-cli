@@ -51,7 +51,7 @@ function isAuthHelpInvocation(args: string[]): boolean {
   }
 
   const authArgs = args.slice(1);
-  if (authArgs.length === 0 || authArgs[0] === "--help" || authArgs[0] === "-h") {
+  if (authArgs[0] === "--help" || authArgs[0] === "-h") {
     return true;
   }
 

@@ -41,6 +41,28 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function isRootHelpInvocation(args: string[]): boolean {
+  return args.length === 0 || args[0] === "--help" || args[0] === "-h";
+}
+
+function isAuthHelpInvocation(args: string[]): boolean {
+  if (args[0] !== "auth") {
+    return false;
+  }
+
+  const authArgs = args.slice(1);
+  if (authArgs[0] === "--help" || authArgs[0] === "-h") {
+    return true;
+  }
+
+  const subcommand = authArgs[0];
+  if (subcommand !== "login" && subcommand !== "whoami" && subcommand !== "logout") {
+    return false;
+  }
+
+  return authArgs.slice(1).includes("--help") || authArgs.slice(1).includes("-h");
+}
+
 function emitRootUsage(baseUrl: string): void {
   emitJson({
     status: "ok",
@@ -125,21 +147,23 @@ export function assertPlatformApiBaseUrl(url: string): void {
 
 export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Promise<number> {
   const baseUrl = process.env.PLATFORM_API_BASE_URL ?? "http://localhost:3000";
-
-  try {
-    assertPlatformApiBaseUrl(baseUrl);
-  } catch (error) {
-    emitError({
-      status: "error",
-      message: toErrorMessage(error),
-    });
-    return 1;
-  }
-
   const args = argv.slice(2);
-  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+
+  if (isRootHelpInvocation(args)) {
     emitRootUsage(baseUrl);
     return 0;
+  }
+
+  if (!isAuthHelpInvocation(args)) {
+    try {
+      assertPlatformApiBaseUrl(baseUrl);
+    } catch (error) {
+      emitError({
+        status: "error",
+        message: toErrorMessage(error),
+      });
+      return 1;
+    }
   }
 
   try {

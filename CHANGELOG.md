@@ -2,6 +2,13 @@
 
 All notable changes to `trading-cli` will be documented in this file.
 
+## v0.1.5
+
+- Make help-discovery behavior explicit and agent-safe:
+  - root `trading-cli --help|-h` works consistently
+  - `auth --help|-h` and `auth <login|whoami|logout> --help|-h` work consistently
+- Tighten boundary bypass semantics so only explicit help invocations skip API base-url validation.
+
 ## v0.1.4
 
 - Add mandatory root help support: `trading-cli --help` and `trading-cli -h`.

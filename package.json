@@ -1,6 +1,6 @@
 {
   "name": "trading-cli",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": false,
   "description": "Trade Nexus external CLI constrained to Platform API boundary",
   "repository": {

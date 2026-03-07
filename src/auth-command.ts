@@ -1,7 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { parseArgs } from "node:util";
 
-import { type CommandContext, deriveRequestId, nonEmpty } from "./command-utils";
+import { type CommandContext, deriveRequestId, hasHelpFlag, nonEmpty } from "./command-utils";
 import {
   clearStoredCliCredential,
   loadStoredCliCredential,
@@ -124,10 +124,6 @@ function emitAuthUsage(context: CommandContext): void {
       "trading-cli auth logout",
     ],
   });
-}
-
-function hasHelpFlag(args: string[]): boolean {
-  return args.includes("--help") || args.includes("-h");
 }
 
 function emitAuthLoginUsage(context: CommandContext): void {

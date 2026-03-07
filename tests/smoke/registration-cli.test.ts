@@ -392,6 +392,27 @@ describe("bot registration and key lifecycle commands", () => {
     expect(payloads[2]?.usage?.[0]).toContain("trading-cli key rotate --bot-id <botId>");
   });
 
+  test("invalid register/key help still returns dispatcher guidance before boundary validation", async () => {
+    const errors: string[] = [];
+    const fetchMock = (async () => {
+      throw new Error("fetch should not be called");
+    }) as unknown as typeof fetch;
+
+    process.env.PLATFORM_API_BASE_URL = "https://api.binance.com";
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(
+      await run(["bun", "src/cli.ts", "register", "totally-invalid", "--help"], fetchMock),
+    ).toBe(1);
+    expect(await run(["bun", "src/cli.ts", "key", "totally-invalid", "--help"], fetchMock)).toBe(1);
+
+    const payloads = errors.map((line) => JSON.parse(line) as { message?: string });
+    expect(payloads[0]?.message).toBe("Unknown register mode 'totally-invalid'. Use 'invite' or 'partner'.");
+    expect(payloads[1]?.message).toBe("Unknown key action 'totally-invalid'. Use 'rotate' or 'revoke'.");
+  });
+
   test("bot list maps to validation bot registry endpoint and emits deterministic json", async () => {
     const logs: string[] = [];
     let authHeader: string | null = null;

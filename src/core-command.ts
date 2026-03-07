@@ -5,6 +5,7 @@ import {
   deriveIdempotencyKey,
   deriveRequestId,
   formatTable,
+  HELP_OPTION,
   isHelpFlag,
   nonEmpty,
   parseJsonFile,
@@ -49,7 +50,6 @@ type TableOutput = {
 
 const CORE_REQUEST_ID_PREFIX = "req-core";
 const CORE_IDEMPOTENCY_KEY_PREFIX = "idem-core";
-const HELP_OPTION = { type: "boolean", short: "h" } as const;
 
 const STRATEGY_STATUSES = new Set<string>(Object.values(StrategyStatus));
 const DEPLOYMENT_STATUSES = new Set<string>(Object.values(DeploymentStatus));
@@ -615,7 +615,7 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
         "trading-cli strategy create --description \"Momentum breakout\" [--name <name>] [--output json|table]",
         "trading-cli strategy create --input <create-strategy.json> [--output json|table]",
         "trading-cli strategy get --strategy-id <id> [--output json|table]",
-        "trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--output json|table]",
+        "trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--limit <int>] [--output json|table]",
         "trading-cli strategy update --strategy-id <id> --status deployable [--output json|table]",
       ],
     });
@@ -750,6 +750,7 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
     const responseItems = (serial.items as Record<string, unknown>[]) ?? [];
     const items = limit === undefined ? responseItems : responseItems.slice(0, limit);
     const limitApplied = limit !== undefined && responseItems.length > items.length;
+    // Preserve the server cursor when the first page already fits within the caller's limit.
     const nextCursor =
       limitApplied
         ? null

@@ -87,6 +87,7 @@ function isValidationBotHelpInvocation(args: string[]): boolean {
   const root = args[0];
 
   if (root === "register") {
+    // Keep validation-bot help parsing local so dispatcher errors do not depend on API URL state.
     return isHelpFlag(args[1]) || hasHelpFlag(args.slice(2));
   }
 

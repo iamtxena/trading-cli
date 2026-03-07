@@ -405,6 +405,28 @@ describe("core command groups", () => {
     expect(payloads[0]?.usage?.[0]).toContain("--limit <int>");
   });
 
+  test("strategy parent help advertises the list limit flag", async () => {
+    const logs: string[] = [];
+    const errors: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "https://api.binance.com";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "strategy", "--help"])).toBe(0);
+    expect(errors).toEqual([]);
+
+    const payload = JSON.parse(logs.at(-1) ?? "{}") as { command?: string; usage?: string[] };
+    expect(payload.command).toBe("strategy");
+    expect(
+      payload.usage?.some((line) => line.includes("trading-cli strategy list") && line.includes("--limit <int>")),
+    ).toBe(true);
+  });
+
   test("strategy get help bypasses boundary validation and emits targeted usage", async () => {
     const logs: string[] = [];
     const errors: string[] = [];

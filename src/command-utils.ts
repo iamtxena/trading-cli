@@ -32,6 +32,8 @@ export function hasHelpFlag(values: string[]): boolean {
   return values.some((value) => isHelpFlag(value));
 }
 
+export const HELP_OPTION = { type: "boolean", short: "h" } as const;
+
 export function parseJsonFile<T>(path: string, label: string): T {
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as T;

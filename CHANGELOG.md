@@ -2,6 +2,13 @@
 
 All notable changes to `trading-cli` will be documented in this file.
 
+## v0.1.7
+
+- Publish the GA candidate from current `main` so npm latest includes the merged CLI help/limit fixes from `#57`:
+  - targeted `strategy list --help` and `bot list --help` keep working without auth or boundary failures
+  - `bot list --limit` returns the deterministic unsupported-option guidance instead of a parser-only error
+- Follow up on merged review feedback by surfacing `--limit` in parent `strategy --help` output and consolidating shared help parsing helpers across CLI command modules.
+
 ## v0.1.6
 
 - Fix `#56` strategy/bot help handling so these targeted subcommands print usage with `--help|-h` without requiring auth or a valid Platform API URL:

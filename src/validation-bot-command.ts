@@ -4,6 +4,8 @@ import {
   type CommandContext,
   deriveIdempotencyKey,
   deriveRequestId,
+  HELP_OPTION,
+  hasHelpFlag,
   isHelpFlag,
   nonEmpty,
   parseJsonFile,
@@ -22,11 +24,6 @@ import {
 type ParsedValues = ReturnType<typeof parseArgs>["values"];
 const VALIDATION_BOT_REQUEST_ID_PREFIX = "req-validation-bot";
 const VALIDATION_BOT_IDEMPOTENCY_KEY_PREFIX = "idem-validation-bot";
-const HELP_OPTION = { type: "boolean", short: "h" } as const;
-
-function hasHelpFlag(args: string[]): boolean {
-  return args.includes("--help") || args.includes("-h");
-}
 
 function hasLimitFlag(args: string[]): boolean {
   return args.some((arg) => arg === "--limit" || arg.startsWith("--limit="));
@@ -433,11 +430,7 @@ async function runRevokeKeyCommand(args: string[], context: CommandContext): Pro
 
 async function runListBotsCommand(args: string[], context: CommandContext): Promise<void> {
   if (hasHelpFlag(args)) {
-    context.emit({
-      status: "ok",
-      command: "bot list",
-      usage: ["trading-cli bot list [--request-id <id>]"],
-    });
+    emitBotListUsage(context);
     return;
   }
 
@@ -448,17 +441,11 @@ async function runListBotsCommand(args: string[], context: CommandContext): Prom
   const parsed = parseArgs({
     args,
     options: {
-      help: HELP_OPTION,
       "request-id": { type: "string" },
     },
     allowPositionals: false,
     strict: true,
   });
-
-  if (parsed.values.help) {
-    emitBotListUsage(context);
-    return;
-  }
 
   const requestId = deriveRequestId(
     VALIDATION_BOT_REQUEST_ID_PREFIX,

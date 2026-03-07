@@ -405,6 +405,33 @@ describe("core command groups", () => {
     expect(payloads[0]?.usage?.[0]).toContain("--limit <int>");
   });
 
+  test("strategy get help bypasses boundary validation and emits targeted usage", async () => {
+    const logs: string[] = [];
+    const errors: string[] = [];
+    const fetchMock = (async () => {
+      throw new Error("fetch should not be called");
+    }) as unknown as typeof fetch;
+
+    process.env.PLATFORM_API_BASE_URL = "https://api.binance.com";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "strategy", "get", "--help"], fetchMock)).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "strategy", "get", "-h"], fetchMock)).toBe(0);
+    expect(errors).toEqual([]);
+
+    const payloads = logs.map((line) => JSON.parse(line) as { command?: string; usage?: string[] });
+    expect(payloads[0]?.command).toBe("strategy get");
+    expect(payloads[1]).toEqual(payloads[0]);
+    expect(payloads[0]?.usage).toEqual([
+      "trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|table]",
+    ]);
+  });
+
   test("strategy list applies deterministic client-side limit slicing", async () => {
     const logs: string[] = [];
     const requests: RecordedRequest[] = [];

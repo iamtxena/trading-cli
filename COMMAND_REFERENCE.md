@@ -152,12 +152,15 @@ Required when no `--input`:
 trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|table]
 ```
 
+Use `trading-cli strategy get --help` to print targeted usage without requiring auth or a valid Platform API URL.
+
 #### `strategy list`
 ```bash
 trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--limit <int>] [--request-id <id>] [--output json|table]
 ```
 
 Use `trading-cli strategy list --help` to print targeted usage without requiring auth or a valid Platform API URL.
+When `--limit` is set, the CLI applies a deterministic client-side slice and returns `nextCursor: null` if that slice truncates the fetched page.
 
 #### `strategy update`
 ```bash
@@ -478,6 +481,7 @@ trading-cli bot list [--request-id <id>]
 ```
 
 Use `trading-cli bot list --help` to print targeted usage without requiring auth or a valid Platform API URL.
+`--limit` is not supported for `bot list`.
 
 #### `register invite`
 ```bash

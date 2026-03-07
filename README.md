@@ -106,6 +106,8 @@ trading-cli backtest export --help
 trading-cli dataset quality-report --help
 ```
 
+`strategy list` supports `--limit` via deterministic client-side slicing. `bot list` does not support `--limit`.
+
 Examples:
 
 ```bash

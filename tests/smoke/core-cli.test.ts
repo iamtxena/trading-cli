@@ -383,6 +383,58 @@ describe("core command groups", () => {
     expect(exportPayload?.status).toBe("ok");
   });
 
+  test("strategy get/list subcommand help bypasses auth and boundary validation", async () => {
+    const logs: string[] = [];
+    const errors: string[] = [];
+    const fetchMock = (async () => {
+      throw new Error("fetch should not be called");
+    }) as unknown as typeof fetch;
+
+    process.env.PLATFORM_API_BASE_URL = "https://api.binance.com";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "strategy", "list", "--help"], fetchMock)).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "strategy", "list", "-h"], fetchMock)).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "strategy", "get", "--help"], fetchMock)).toBe(0);
+    expect(errors).toHaveLength(0);
+
+    const listHelp = JSON.parse(logs[0] ?? "{}") as { command: string; usage: string[] };
+    const listShortHelp = JSON.parse(logs[1] ?? "{}") as { command: string; usage: string[] };
+    const getHelp = JSON.parse(logs[2] ?? "{}") as { command: string; usage: string[] };
+
+    expect(listHelp.command).toBe("strategy list");
+    expect(listHelp.usage).toEqual([
+      "trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--request-id <id>] [--output json|table]",
+    ]);
+    expect(listShortHelp).toEqual(listHelp);
+    expect(getHelp.command).toBe("strategy get");
+    expect(getHelp.usage).toEqual([
+      "trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|table]",
+    ]);
+  });
+
+  test("strategy list rejects unsupported limit with explicit guidance before auth", async () => {
+    const errors: string[] = [];
+    const fetchMock = (async () => {
+      throw new Error("fetch should not be called");
+    }) as unknown as typeof fetch;
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "strategy", "list", "--limit", "1"], fetchMock)).toBe(1);
+
+    const payload = JSON.parse(errors.at(-1) ?? "{}") as { message: string };
+    expect(payload.message).toBe("--limit is not supported for strategy list.");
+  });
+
   test("deploy create sends idempotency header and table output is deterministic", async () => {
     const logs: string[] = [];
     const requests: RecordedRequest[] = [];

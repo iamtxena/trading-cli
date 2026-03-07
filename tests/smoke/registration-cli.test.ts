@@ -441,6 +441,50 @@ describe("bot registration and key lifecycle commands", () => {
     expect(payload.bots[0]?.keys[0]?.createdAt).toBe("2026-02-20T12:00:00.000Z");
   });
 
+  test("bot list subcommand help bypasses auth and boundary validation", async () => {
+    const logs: string[] = [];
+    const errors: string[] = [];
+    const fetchMock = (async () => {
+      throw new Error("fetch should not be called");
+    }) as unknown as typeof fetch;
+
+    process.env.PLATFORM_API_BASE_URL = "https://api.binance.com";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "bot", "list", "--help"], fetchMock)).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "bot", "list", "-h"], fetchMock)).toBe(0);
+    expect(errors).toHaveLength(0);
+
+    const helpPayload = JSON.parse(logs[0] ?? "{}") as { command: string; usage: string[] };
+    const shortHelpPayload = JSON.parse(logs[1] ?? "{}") as { command: string; usage: string[] };
+
+    expect(helpPayload.command).toBe("bot list");
+    expect(helpPayload.usage).toEqual(["trading-cli bot list [--request-id <id>]"]);
+    expect(shortHelpPayload).toEqual(helpPayload);
+  });
+
+  test("bot list rejects unsupported limit with explicit guidance before auth", async () => {
+    const errors: string[] = [];
+    const fetchMock = (async () => {
+      throw new Error("fetch should not be called");
+    }) as unknown as typeof fetch;
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "bot", "list", "--limit", "1"], fetchMock)).toBe(1);
+
+    const payload = JSON.parse(errors.at(-1) ?? "{}") as { message: string };
+    expect(payload.message).toBe("--limit is not supported for bot list.");
+  });
+
   test("bot list rejects unsupported options with strict parser error", async () => {
     const errors: string[] = [];
 

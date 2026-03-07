@@ -53,6 +53,22 @@ const STRATEGY_STATUSES = new Set<string>(Object.values(StrategyStatus));
 const DEPLOYMENT_STATUSES = new Set<string>(Object.values(DeploymentStatus));
 const ORDER_STATUSES = new Set<string>(Object.values(OrderStatus));
 
+function hasHelpFlag(args: string[]): boolean {
+  return args.includes("--help") || args.includes("-h");
+}
+
+function hasLimitFlag(args: string[]): boolean {
+  return args.some((arg) => arg === "--limit" || arg.startsWith("--limit="));
+}
+
+function emitLeafUsage(context: CommandContext, command: string, usage: string): void {
+  context.emit({
+    status: "ok",
+    command,
+    usage: [usage],
+  });
+}
+
 function parseCsv(value: unknown): string[] {
   const raw = nonEmpty(value);
   if (!raw) {
@@ -580,9 +596,8 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
     return;
   }
 
-  const api = createStrategiesApiClient(context);
-
   if (subcommand === "create") {
+    const api = createStrategiesApiClient(context);
     const parsed = parseArgs({
       args: args.slice(1),
       options: {
@@ -620,6 +635,16 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
   }
 
   if (subcommand === "get") {
+    if (hasHelpFlag(args.slice(1))) {
+      emitLeafUsage(
+        context,
+        "strategy get",
+        "trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|table]",
+      );
+      return;
+    }
+
+    const api = createStrategiesApiClient(context);
     const parsed = parseArgs({
       args: args.slice(1),
       options: {
@@ -658,6 +683,19 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
   }
 
   if (subcommand === "list") {
+    if (hasHelpFlag(args.slice(1))) {
+      emitLeafUsage(
+        context,
+        "strategy list",
+        "trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--request-id <id>] [--output json|table]",
+      );
+      return;
+    }
+
+    if (hasLimitFlag(args.slice(1))) {
+      throw new Error("--limit is not supported for strategy list.");
+    }
+
     const parsed = parseArgs({
       args: args.slice(1),
       options: {
@@ -670,6 +708,7 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
       strict: true,
     });
 
+    const api = createStrategiesApiClient(context);
     const output = parseOutputMode(parsed.values.output);
     const status = parseEnumValue<StrategyStatus>(
       parsed.values.status,
@@ -700,6 +739,7 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
   }
 
   if (subcommand === "update") {
+    const api = createStrategiesApiClient(context);
     const parsed = parseArgs({
       args: args.slice(1),
       options: {

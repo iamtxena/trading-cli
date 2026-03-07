@@ -152,10 +152,17 @@ Required when no `--input`:
 trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|table]
 ```
 
+Notes:
+- `--help` / `-h` emits this usage without requiring auth or endpoint validation.
+
 #### `strategy list`
 ```bash
 trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--request-id <id>] [--output json|table]
 ```
+
+Notes:
+- `--help` / `-h` emits this usage without requiring auth or endpoint validation.
+- `--limit` is not supported for `strategy list`; use `--cursor` pagination when the service returns `nextCursor`.
 
 #### `strategy update`
 ```bash
@@ -474,6 +481,10 @@ Aliases:
 ```bash
 trading-cli bot list [--request-id <id>]
 ```
+
+Notes:
+- `--help` / `-h` emits this usage without requiring auth or endpoint validation.
+- `--limit` is not supported for `bot list`.
 
 #### `register invite`
 ```bash

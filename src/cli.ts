@@ -45,6 +45,10 @@ function isRootHelpInvocation(args: string[]): boolean {
   return args.length === 0 || args[0] === "--help" || args[0] === "-h";
 }
 
+function hasHelpFlag(args: string[]): boolean {
+  return args.includes("--help") || args.includes("-h");
+}
+
 function isAuthHelpInvocation(args: string[]): boolean {
   if (args[0] !== "auth") {
     return false;
@@ -61,6 +65,18 @@ function isAuthHelpInvocation(args: string[]): boolean {
   }
 
   return authArgs.slice(1).includes("--help") || authArgs.slice(1).includes("-h");
+}
+
+function isTargetedSubcommandHelpInvocation(args: string[]): boolean {
+  if (args[0] === "strategy" && (args[1] === "get" || args[1] === "list")) {
+    return hasHelpFlag(args.slice(2));
+  }
+
+  if (args[0] === "bot" && args[1] === "list") {
+    return hasHelpFlag(args.slice(2));
+  }
+
+  return false;
 }
 
 function emitRootUsage(baseUrl: string): void {
@@ -154,7 +170,7 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
     return 0;
   }
 
-  if (!isAuthHelpInvocation(args)) {
+  if (!isAuthHelpInvocation(args) && !isTargetedSubcommandHelpInvocation(args)) {
     try {
       assertPlatformApiBaseUrl(baseUrl);
     } catch (error) {

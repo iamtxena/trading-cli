@@ -6,6 +6,7 @@ import { runCoreCommand } from "./core-command";
 import { runDatasetCommand } from "./dataset-command";
 import { runSharedCommand } from "./shared-command";
 import { runAuthCommand } from "./auth-command";
+import { hasHelpFlag, isHelpFlag } from "./command-utils";
 
 const BLOCKED_PROVIDER_HOST_HINTS = [
   "lona",
@@ -51,7 +52,7 @@ function isAuthHelpInvocation(args: string[]): boolean {
   }
 
   const authArgs = args.slice(1);
-  if (authArgs[0] === "--help" || authArgs[0] === "-h") {
+  if (isHelpFlag(authArgs[0])) {
     return true;
   }
 
@@ -60,7 +61,57 @@ function isAuthHelpInvocation(args: string[]): boolean {
     return false;
   }
 
-  return authArgs.slice(1).includes("--help") || authArgs.slice(1).includes("-h");
+  return hasHelpFlag(authArgs.slice(1));
+}
+
+function isStrategyHelpInvocation(args: string[]): boolean {
+  if (args[0] !== "strategy") {
+    return false;
+  }
+
+  const subcommand = args[1];
+  if (isHelpFlag(subcommand)) {
+    return true;
+  }
+
+  return (
+    (subcommand === "create" ||
+      subcommand === "get" ||
+      subcommand === "list" ||
+      subcommand === "update") &&
+    hasHelpFlag(args.slice(2))
+  );
+}
+
+function isValidationBotHelpInvocation(args: string[]): boolean {
+  const root = args[0];
+
+  if (root === "register") {
+    return isHelpFlag(args[1]) || hasHelpFlag(args.slice(2));
+  }
+
+  if (root === "key") {
+    return isHelpFlag(args[1]) || hasHelpFlag(args.slice(2));
+  }
+
+  if (root !== "bot") {
+    return false;
+  }
+
+  const mode = args[1];
+  if (isHelpFlag(mode)) {
+    return true;
+  }
+
+  if (mode === "list") {
+    return hasHelpFlag(args.slice(2));
+  }
+
+  if (mode === "register" || mode === "key") {
+    return hasHelpFlag(args.slice(2));
+  }
+
+  return false;
 }
 
 function emitRootUsage(baseUrl: string): void {
@@ -154,7 +205,11 @@ export async function run(argv: string[], fetchImpl: typeof fetch = fetch): Prom
     return 0;
   }
 
-  if (!isAuthHelpInvocation(args)) {
+  if (
+    !isAuthHelpInvocation(args) &&
+    !isStrategyHelpInvocation(args) &&
+    !isValidationBotHelpInvocation(args)
+  ) {
     try {
       assertPlatformApiBaseUrl(baseUrl);
     } catch (error) {

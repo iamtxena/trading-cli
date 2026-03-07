@@ -383,6 +383,99 @@ describe("core command groups", () => {
     expect(exportPayload?.status).toBe("ok");
   });
 
+  test("strategy list help bypasses boundary validation and emits targeted usage", async () => {
+    const logs: string[] = [];
+    const errors: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "https://api.binance.com";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "strategy", "list", "--help"])).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "strategy", "list", "-h"])).toBe(0);
+    expect(errors).toEqual([]);
+
+    const payloads = logs.map((line) => JSON.parse(line) as { command?: string; usage?: string[] });
+    expect(payloads[0]?.command).toBe("strategy list");
+    expect(payloads[1]?.command).toBe("strategy list");
+    expect(payloads[0]?.usage?.[0]).toContain("--limit <int>");
+  });
+
+  test("strategy list applies deterministic client-side limit slicing", async () => {
+    const logs: string[] = [];
+    const requests: RecordedRequest[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-core-limit-001";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+      const headers = new Headers(init?.headers);
+      requests.push({ path: url.pathname, method, headers });
+
+      if (url.pathname === "/v1/strategies" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-strategy-list-limit-001",
+          items: [
+            {
+              id: "strat-001",
+              name: "Breakout",
+              status: "tested",
+              provider: "lona",
+              providerRefId: "provider-001",
+              tags: ["momentum"],
+              createdAt: "2026-03-01T10:00:00Z",
+              updatedAt: "2026-03-01T10:00:00Z",
+            },
+            {
+              id: "strat-002",
+              name: "Mean Reversion",
+              status: "draft",
+              provider: "xai",
+              providerRefId: "provider-002",
+              tags: ["mean-reversion"],
+              createdAt: "2026-03-02T10:00:00Z",
+              updatedAt: "2026-03-02T10:00:00Z",
+            },
+          ],
+          nextCursor: "cursor-002",
+        });
+      }
+
+      return jsonResponse(
+        {
+          requestId: "req-unexpected",
+          error: { code: "not_found", message: `Unexpected request: ${method} ${url.pathname}` },
+        },
+        404,
+      );
+    }) as typeof fetch;
+
+    expect(
+      await run(["bun", "src/cli.ts", "strategy", "list", "--limit", "1"], fetchMock),
+    ).toBe(0);
+    expect(requests.map((request) => `${request.method} ${request.path}`)).toEqual(["GET /v1/strategies"]);
+
+    const payload = JSON.parse(logs.at(-1) ?? "{}") as {
+      command?: string;
+      limit?: number;
+      nextCursor?: string | null;
+      items?: Array<{ id: string }>;
+    };
+    expect(payload.command).toBe("strategy list");
+    expect(payload.limit).toBe(1);
+    expect(payload.nextCursor).toBeNull();
+    expect(payload.items?.map((item) => item.id)).toEqual(["strat-001"]);
+  });
+
   test("deploy create sends idempotency header and table output is deterministic", async () => {
     const logs: string[] = [];
     const requests: RecordedRequest[] = [];

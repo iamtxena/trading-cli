@@ -383,7 +383,29 @@ describe("core command groups", () => {
     expect(exportPayload?.status).toBe("ok");
   });
 
-  test("strategy get/list subcommand help bypasses auth and boundary validation", async () => {
+  test("strategy list help bypasses boundary validation and emits targeted usage", async () => {
+    const logs: string[] = [];
+    const errors: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "https://api.binance.com";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "strategy", "list", "--help"])).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "strategy", "list", "-h"])).toBe(0);
+    expect(errors).toEqual([]);
+
+    const payloads = logs.map((line) => JSON.parse(line) as { command?: string; usage?: string[] });
+    expect(payloads[0]?.command).toBe("strategy list");
+    expect(payloads[1]?.command).toBe("strategy list");
+    expect(payloads[0]?.usage?.[0]).toContain("--limit <int>");
+  });
+
+  test("strategy get help bypasses boundary validation and emits targeted usage", async () => {
     const logs: string[] = [];
     const errors: string[] = [];
     const fetchMock = (async () => {
@@ -398,41 +420,87 @@ describe("core command groups", () => {
       errors.push(String(value));
     };
 
-    expect(await run(["bun", "src/cli.ts", "strategy", "list", "--help"], fetchMock)).toBe(0);
-    expect(await run(["bun", "src/cli.ts", "strategy", "list", "-h"], fetchMock)).toBe(0);
     expect(await run(["bun", "src/cli.ts", "strategy", "get", "--help"], fetchMock)).toBe(0);
-    expect(errors).toHaveLength(0);
+    expect(await run(["bun", "src/cli.ts", "strategy", "get", "-h"], fetchMock)).toBe(0);
+    expect(errors).toEqual([]);
 
-    const listHelp = JSON.parse(logs[0] ?? "{}") as { command: string; usage: string[] };
-    const listShortHelp = JSON.parse(logs[1] ?? "{}") as { command: string; usage: string[] };
-    const getHelp = JSON.parse(logs[2] ?? "{}") as { command: string; usage: string[] };
-
-    expect(listHelp.command).toBe("strategy list");
-    expect(listHelp.usage).toEqual([
-      "trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--request-id <id>] [--output json|table]",
-    ]);
-    expect(listShortHelp).toEqual(listHelp);
-    expect(getHelp.command).toBe("strategy get");
-    expect(getHelp.usage).toEqual([
+    const payloads = logs.map((line) => JSON.parse(line) as { command?: string; usage?: string[] });
+    expect(payloads[0]?.command).toBe("strategy get");
+    expect(payloads[1]).toEqual(payloads[0]);
+    expect(payloads[0]?.usage).toEqual([
       "trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|table]",
     ]);
   });
 
-  test("strategy list rejects unsupported limit with explicit guidance before auth", async () => {
-    const errors: string[] = [];
-    const fetchMock = (async () => {
-      throw new Error("fetch should not be called");
-    }) as unknown as typeof fetch;
+  test("strategy list applies deterministic client-side limit slicing", async () => {
+    const logs: string[] = [];
+    const requests: RecordedRequest[] = [];
 
     process.env.PLATFORM_API_BASE_URL = "http://localhost:3000";
-    console.error = (value: unknown) => {
-      errors.push(String(value));
+    process.env.PLATFORM_API_BEARER_TOKEN = "token-core-limit-001";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
     };
 
-    expect(await run(["bun", "src/cli.ts", "strategy", "list", "--limit", "1"], fetchMock)).toBe(1);
+    const fetchMock = (async (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      const method = init?.method ?? "GET";
+      const headers = new Headers(init?.headers);
+      requests.push({ path: url.pathname, method, headers });
 
-    const payload = JSON.parse(errors.at(-1) ?? "{}") as { message: string };
-    expect(payload.message).toBe("--limit is not supported for strategy list.");
+      if (url.pathname === "/v1/strategies" && method === "GET") {
+        return jsonResponse({
+          requestId: "req-strategy-list-limit-001",
+          items: [
+            {
+              id: "strat-001",
+              name: "Breakout",
+              status: "tested",
+              provider: "lona",
+              providerRefId: "provider-001",
+              tags: ["momentum"],
+              createdAt: "2026-03-01T10:00:00Z",
+              updatedAt: "2026-03-01T10:00:00Z",
+            },
+            {
+              id: "strat-002",
+              name: "Mean Reversion",
+              status: "draft",
+              provider: "xai",
+              providerRefId: "provider-002",
+              tags: ["mean-reversion"],
+              createdAt: "2026-03-02T10:00:00Z",
+              updatedAt: "2026-03-02T10:00:00Z",
+            },
+          ],
+          nextCursor: "cursor-002",
+        });
+      }
+
+      return jsonResponse(
+        {
+          requestId: "req-unexpected",
+          error: { code: "not_found", message: `Unexpected request: ${method} ${url.pathname}` },
+        },
+        404,
+      );
+    }) as typeof fetch;
+
+    expect(
+      await run(["bun", "src/cli.ts", "strategy", "list", "--limit", "1"], fetchMock),
+    ).toBe(0);
+    expect(requests.map((request) => `${request.method} ${request.path}`)).toEqual(["GET /v1/strategies"]);
+
+    const payload = JSON.parse(logs.at(-1) ?? "{}") as {
+      command?: string;
+      limit?: number;
+      nextCursor?: string | null;
+      items?: Array<{ id: string }>;
+    };
+    expect(payload.command).toBe("strategy list");
+    expect(payload.limit).toBe(1);
+    expect(payload.nextCursor).toBeNull();
+    expect(payload.items?.map((item) => item.id)).toEqual(["strat-001"]);
   });
 
   test("deploy create sends idempotency header and table output is deterministic", async () => {

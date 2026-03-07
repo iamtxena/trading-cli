@@ -5,6 +5,7 @@ import {
   deriveIdempotencyKey,
   deriveRequestId,
   formatTable,
+  isHelpFlag,
   nonEmpty,
   parseJsonFile,
   parseOutputMode,
@@ -48,26 +49,11 @@ type TableOutput = {
 
 const CORE_REQUEST_ID_PREFIX = "req-core";
 const CORE_IDEMPOTENCY_KEY_PREFIX = "idem-core";
+const HELP_OPTION = { type: "boolean", short: "h" } as const;
 
 const STRATEGY_STATUSES = new Set<string>(Object.values(StrategyStatus));
 const DEPLOYMENT_STATUSES = new Set<string>(Object.values(DeploymentStatus));
 const ORDER_STATUSES = new Set<string>(Object.values(OrderStatus));
-
-function hasHelpFlag(args: string[]): boolean {
-  return args.includes("--help") || args.includes("-h");
-}
-
-function hasLimitFlag(args: string[]): boolean {
-  return args.some((arg) => arg === "--limit" || arg.startsWith("--limit="));
-}
-
-function emitLeafUsage(context: CommandContext, command: string, usage: string): void {
-  context.emit({
-    status: "ok",
-    command,
-    usage: [usage],
-  });
-}
 
 function parseCsv(value: unknown): string[] {
   const raw = nonEmpty(value);
@@ -180,6 +166,46 @@ function emitOutput(
   console.log(lines.join("\n"));
 }
 
+function emitStrategyCreateUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "strategy create",
+    usage: [
+      "trading-cli strategy create --description \"Momentum breakout\" [--name <name>] [--provider <provider>] [--request-id <id>] [--output json|table]",
+      "trading-cli strategy create --input <create-strategy.json> [--request-id <id>] [--output json|table]",
+    ],
+  });
+}
+
+function emitStrategyGetUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "strategy get",
+    usage: ["trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|table]"],
+  });
+}
+
+function emitStrategyListUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "strategy list",
+    usage: [
+      "trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--limit <int>] [--request-id <id>] [--output json|table]",
+    ],
+  });
+}
+
+function emitStrategyUpdateUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "strategy update",
+    usage: [
+      "trading-cli strategy update --strategy-id <id> [--name <name>] [--description <text>] [--status draft|testing|tested|deployable|archived|failed] [--tags <csv>] [--request-id <id>] [--output json|table]",
+      "trading-cli strategy update --strategy-id <id> --input <update-strategy.json> [--request-id <id>] [--output json|table]",
+    ],
+  });
+}
+
 function toStrategyTableRow(strategy: Record<string, unknown>): TableRow {
   return {
     id: strategy.id as string,
@@ -263,7 +289,7 @@ function parseMarketScanRequest(values: ParsedValues): MarketScanRequest {
 
 async function runResearchCommand(args: string[], context: CommandContext): Promise<void> {
   const subcommand = args[0];
-  if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+  if (!subcommand || isHelpFlag(subcommand)) {
     context.emit({
       status: "ok",
       command: "research",
@@ -339,7 +365,7 @@ async function runResearchCommand(args: string[], context: CommandContext): Prom
 
 async function runKnowledgeCommand(args: string[], context: CommandContext): Promise<void> {
   const subcommand = args[0];
-  if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+  if (!subcommand || isHelpFlag(subcommand)) {
     context.emit({
       status: "ok",
       command: "knowledge",
@@ -476,7 +502,7 @@ async function runKnowledgeCommand(args: string[], context: CommandContext): Pro
 
 async function runHealthCommand(args: string[], context: CommandContext): Promise<void> {
   const subcommand = args[0];
-  if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+  if (!subcommand || isHelpFlag(subcommand)) {
     context.emit({
       status: "ok",
       command: "health",
@@ -581,7 +607,7 @@ function parseUpdateStrategyRequest(values: ParsedValues): UpdateStrategyRequest
 
 async function runStrategyCommand(args: string[], context: CommandContext): Promise<void> {
   const subcommand = args[0];
-  if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+  if (!subcommand || isHelpFlag(subcommand)) {
     context.emit({
       status: "ok",
       command: "strategy",
@@ -597,10 +623,10 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
   }
 
   if (subcommand === "create") {
-    const api = createStrategiesApiClient(context);
     const parsed = parseArgs({
       args: args.slice(1),
       options: {
+        help: HELP_OPTION,
         input: { type: "string" },
         name: { type: "string" },
         description: { type: "string" },
@@ -612,7 +638,13 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
       strict: true,
     });
 
+    if (parsed.values.help) {
+      emitStrategyCreateUsage(context);
+      return;
+    }
+
     const output = parseOutputMode(parsed.values.output);
+    const api = createStrategiesApiClient(context);
     const response = await api.createStrategyV1({
       createStrategyRequest: parseCreateStrategyRequest(parsed.values),
       xRequestId: parseRequestId(parsed.values),
@@ -635,19 +667,10 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
   }
 
   if (subcommand === "get") {
-    if (hasHelpFlag(args.slice(1))) {
-      emitLeafUsage(
-        context,
-        "strategy get",
-        "trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|table]",
-      );
-      return;
-    }
-
-    const api = createStrategiesApiClient(context);
     const parsed = parseArgs({
       args: args.slice(1),
       options: {
+        help: HELP_OPTION,
         "strategy-id": { type: "string" },
         "request-id": { type: "string" },
         output: { type: "string" },
@@ -656,11 +679,17 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
       strict: true,
     });
 
+    if (parsed.values.help) {
+      emitStrategyGetUsage(context);
+      return;
+    }
+
     const strategyId = nonEmpty(parsed.values["strategy-id"]);
     if (!strategyId) {
       throw new Error("--strategy-id is required.");
     }
     const output = parseOutputMode(parsed.values.output);
+    const api = createStrategiesApiClient(context);
     const response = await api.getStrategyV1({
       strategyId,
       xRequestId: parseRequestId(parsed.values),
@@ -683,24 +712,13 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
   }
 
   if (subcommand === "list") {
-    if (hasHelpFlag(args.slice(1))) {
-      emitLeafUsage(
-        context,
-        "strategy list",
-        "trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--request-id <id>] [--output json|table]",
-      );
-      return;
-    }
-
-    if (hasLimitFlag(args.slice(1))) {
-      throw new Error("--limit is not supported for strategy list.");
-    }
-
     const parsed = parseArgs({
       args: args.slice(1),
       options: {
+        help: HELP_OPTION,
         status: { type: "string" },
         cursor: { type: "string" },
+        limit: { type: "string" },
         "request-id": { type: "string" },
         output: { type: "string" },
       },
@@ -708,13 +726,19 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
       strict: true,
     });
 
-    const api = createStrategiesApiClient(context);
+    if (parsed.values.help) {
+      emitStrategyListUsage(context);
+      return;
+    }
+
     const output = parseOutputMode(parsed.values.output);
     const status = parseEnumValue<StrategyStatus>(
       parsed.values.status,
       "--status",
       STRATEGY_STATUSES,
     );
+    const limit = parseOptionalPositiveInteger(parsed.values.limit, "--limit");
+    const api = createStrategiesApiClient(context);
 
     const response = await api.listStrategiesV1({
       xRequestId: parseRequestId(parsed.values),
@@ -723,14 +747,30 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
     });
 
     const serial = toSerializable(response) as Record<string, unknown>;
-    const items = (serial.items as Record<string, unknown>[]) ?? [];
+    const responseItems = (serial.items as Record<string, unknown>[]) ?? [];
+    const items = limit === undefined ? responseItems : responseItems.slice(0, limit);
+    const limitApplied = limit !== undefined && responseItems.length > items.length;
+    const nextCursor =
+      limitApplied
+        ? null
+        : (serial.nextCursor as string | null | undefined);
     emitOutput(
       context,
       output,
-      { status: "ok", command: "strategy list", ...serial },
+      {
+        status: "ok",
+        command: "strategy list",
+        ...serial,
+        items,
+        nextCursor,
+        ...(limit !== undefined ? { limit } : {}),
+      },
       {
         title: "strategy list",
-        notes: [`requestId: ${response.requestId}`, `nextCursor: ${response.nextCursor ?? "-"}`],
+        notes: [
+          `requestId: ${response.requestId}`,
+          `nextCursor: ${nextCursor ?? "-"}${limitApplied ? " (client-side limit applied)" : ""}`,
+        ],
         rows: items.map((item) => toStrategyTableRow(item)),
         columns: ["id", "name", "status", "provider", "createdAt"],
       },
@@ -739,10 +779,10 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
   }
 
   if (subcommand === "update") {
-    const api = createStrategiesApiClient(context);
     const parsed = parseArgs({
       args: args.slice(1),
       options: {
+        help: HELP_OPTION,
         "strategy-id": { type: "string" },
         input: { type: "string" },
         name: { type: "string" },
@@ -756,12 +796,18 @@ async function runStrategyCommand(args: string[], context: CommandContext): Prom
       strict: true,
     });
 
+    if (parsed.values.help) {
+      emitStrategyUpdateUsage(context);
+      return;
+    }
+
     const strategyId = nonEmpty(parsed.values["strategy-id"]);
     if (!strategyId) {
       throw new Error("--strategy-id is required.");
     }
 
     const output = parseOutputMode(parsed.values.output);
+    const api = createStrategiesApiClient(context);
     const response = await api.updateStrategyV1({
       strategyId,
       updateStrategyRequest: parseUpdateStrategyRequest(parsed.values),

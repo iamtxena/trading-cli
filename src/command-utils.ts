@@ -24,6 +24,14 @@ export function nonEmpty(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+export function isHelpFlag(value: string | undefined): boolean {
+  return value === "--help" || value === "-h";
+}
+
+export function hasHelpFlag(values: string[]): boolean {
+  return values.some((value) => isHelpFlag(value));
+}
+
 export function parseJsonFile<T>(path: string, label: string): T {
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as T;

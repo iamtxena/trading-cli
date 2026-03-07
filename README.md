@@ -63,17 +63,27 @@ Note: SDK sync updates generated API/model files from the authoritative contract
 ## Review Run Commands
 
 ```bash
-trading-cli review-run --help
-trading-cli validation run --help
+trading-cli review-run trigger --help
+trading-cli review-run retrieve --help
+trading-cli review-run list --help
+trading-cli review-run render --help
+trading-cli review-run review --help
+trading-cli review-run review-comment --help
+trading-cli review-run review-decision --help
+trading-cli review-run baseline --help
+trading-cli review-run replay --help
+trading-cli validation run trigger --help
+trading-cli validation run list --help
 ```
 
 ## Bot Registration Commands
 
 ```bash
-trading-cli bot --help
 trading-cli bot list --help
-trading-cli register --help
-trading-cli key --help
+trading-cli register invite --help
+trading-cli register partner --help
+trading-cli key rotate --help
+trading-cli key revoke --help
 ```
 
 ## Human Auth Commands
@@ -87,15 +97,16 @@ trading-cli auth logout --help
 ## Core/Data Commands
 
 ```bash
-trading-cli health --help
-trading-cli knowledge --help
-trading-cli strategy get --help
+trading-cli health get --help
+trading-cli knowledge search --help
+trading-cli knowledge patterns --help
+trading-cli knowledge regime --help
 trading-cli strategy list --help
 trading-cli backtest export --help
-trading-cli dataset --help
+trading-cli dataset quality-report --help
 ```
 
-`strategy list` and `bot list` do not support `--limit`; only commands that document `--limit` accept it.
+`strategy list` supports `--limit` via deterministic client-side slicing. `bot list` does not support `--limit`.
 
 Examples:
 
@@ -107,6 +118,8 @@ trading-cli knowledge search --query "momentum breakout" --assets btc,eth --limi
 trading-cli knowledge patterns --type momentum --asset btc --limit 20
 
 trading-cli knowledge regime --asset btc
+
+trading-cli strategy list --status tested --limit 5
 
 trading-cli backtest export create --dataset-ids dataset-btc-1h-2025 --asset-classes crypto
 

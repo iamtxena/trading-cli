@@ -366,6 +366,32 @@ describe("bot registration and key lifecycle commands", () => {
     expect(keyPayload.usage).toContain("trading-cli key rotate --bot-id <botId> [--reason <text>]");
   });
 
+  test("bot/register/key leaf help bypasses boundary validation and emits targeted usage", async () => {
+    const logs: string[] = [];
+    const errors: string[] = [];
+
+    process.env.PLATFORM_API_BASE_URL = "https://api.binance.com";
+    console.log = (value: unknown) => {
+      logs.push(String(value));
+    };
+    console.error = (value: unknown) => {
+      errors.push(String(value));
+    };
+
+    expect(await run(["bun", "src/cli.ts", "bot", "list", "--help"])).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "register", "invite", "--help"])).toBe(0);
+    expect(await run(["bun", "src/cli.ts", "key", "rotate", "--help"])).toBe(0);
+    expect(errors).toEqual([]);
+
+    const payloads = logs.map((line) => JSON.parse(line) as { command?: string; usage?: string[] });
+    expect(payloads[0]?.command).toBe("bot list");
+    expect(payloads[0]?.usage).toContain("trading-cli bot list [--request-id <id>]");
+    expect(payloads[1]?.command).toBe("register invite");
+    expect(payloads[1]?.usage?.[0]).toContain("trading-cli register invite --invite-code <code>");
+    expect(payloads[2]?.command).toBe("key rotate");
+    expect(payloads[2]?.usage?.[0]).toContain("trading-cli key rotate --bot-id <botId>");
+  });
+
   test("bot list maps to validation bot registry endpoint and emits deterministic json", async () => {
     const logs: string[] = [];
     let authHeader: string | null = null;

@@ -152,17 +152,15 @@ Required when no `--input`:
 trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|table]
 ```
 
-Notes:
-- `--help` / `-h` emits this usage without requiring auth or endpoint validation.
+Use `trading-cli strategy get --help` to print targeted usage without requiring auth or a valid Platform API URL.
 
 #### `strategy list`
 ```bash
-trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--request-id <id>] [--output json|table]
+trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--limit <int>] [--request-id <id>] [--output json|table]
 ```
 
-Notes:
-- `--help` / `-h` emits this usage without requiring auth or endpoint validation.
-- `--limit` is not supported for `strategy list`; use `--cursor` pagination when the service returns `nextCursor`.
+Use `trading-cli strategy list --help` to print targeted usage without requiring auth or a valid Platform API URL.
+When `--limit` is set, the CLI applies a deterministic client-side slice and returns `nextCursor: null` if that slice truncates the fetched page.
 
 #### `strategy update`
 ```bash
@@ -482,9 +480,8 @@ Aliases:
 trading-cli bot list [--request-id <id>]
 ```
 
-Notes:
-- `--help` / `-h` emits this usage without requiring auth or endpoint validation.
-- `--limit` is not supported for `bot list`.
+Use `trading-cli bot list --help` to print targeted usage without requiring auth or a valid Platform API URL.
+`--limit` is not supported for `bot list`.
 
 #### `register invite`
 ```bash

@@ -2,6 +2,17 @@
 
 All notable changes to `trading-cli` will be documented in this file.
 
+## v0.1.6
+
+- Fix `#56` strategy/bot help handling so these targeted subcommands print usage with `--help|-h` without requiring auth or a valid Platform API URL:
+  - `strategy list`
+  - `bot list`
+  - `register invite`
+  - `register partner`
+  - `key rotate`
+  - `key revoke`
+- Add deterministic `--limit <int>` support to `strategy list` and align the CLI reference/examples with the shipped behavior.
+
 ## v0.1.5
 
 - Make help-discovery behavior explicit and agent-safe:

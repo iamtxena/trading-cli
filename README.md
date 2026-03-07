@@ -101,6 +101,7 @@ trading-cli health get --help
 trading-cli knowledge search --help
 trading-cli knowledge patterns --help
 trading-cli knowledge regime --help
+trading-cli strategy list --help
 trading-cli backtest export --help
 trading-cli dataset quality-report --help
 ```
@@ -115,6 +116,8 @@ trading-cli knowledge search --query "momentum breakout" --assets btc,eth --limi
 trading-cli knowledge patterns --type momentum --asset btc --limit 20
 
 trading-cli knowledge regime --asset btc
+
+trading-cli strategy list --status tested --limit 5
 
 trading-cli backtest export create --dataset-ids dataset-btc-1h-2025 --asset-classes crypto
 

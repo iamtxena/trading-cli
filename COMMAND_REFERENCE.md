@@ -154,8 +154,10 @@ trading-cli strategy get --strategy-id <id> [--request-id <id>] [--output json|t
 
 #### `strategy list`
 ```bash
-trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--request-id <id>] [--output json|table]
+trading-cli strategy list [--status draft|testing|tested|deployable|archived|failed] [--cursor <token>] [--limit <int>] [--request-id <id>] [--output json|table]
 ```
+
+Use `trading-cli strategy list --help` to print targeted usage without requiring auth or a valid Platform API URL.
 
 #### `strategy update`
 ```bash
@@ -474,6 +476,8 @@ Aliases:
 ```bash
 trading-cli bot list [--request-id <id>]
 ```
+
+Use `trading-cli bot list --help` to print targeted usage without requiring auth or a valid Platform API URL.
 
 #### `register invite`
 ```bash

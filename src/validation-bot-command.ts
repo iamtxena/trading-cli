@@ -4,6 +4,7 @@ import {
   type CommandContext,
   deriveIdempotencyKey,
   deriveRequestId,
+  isHelpFlag,
   nonEmpty,
   parseJsonFile,
   toSerializable,
@@ -21,6 +22,7 @@ import {
 type ParsedValues = ReturnType<typeof parseArgs>["values"];
 const VALIDATION_BOT_REQUEST_ID_PREFIX = "req-validation-bot";
 const VALIDATION_BOT_IDEMPOTENCY_KEY_PREFIX = "idem-validation-bot";
+const HELP_OPTION = { type: "boolean", short: "h" } as const;
 
 function parseMetadataObject(raw: string, label: string): Record<string, unknown> {
   let parsed: unknown;
@@ -142,10 +144,65 @@ function summarizeBotSummary(bot: BotSummary) {
   return toSerializable(bot) as Record<string, unknown>;
 }
 
+function emitRegisterInviteUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "register invite",
+    usage: [
+      "trading-cli register invite --invite-code <code> --bot-name <name> [--metadata-json <json>] [--metadata-file <file>] [--request-id <id>] [--idempotency-key <key>]",
+      "trading-cli register invite --input <register-invite.json> [--request-id <id>] [--idempotency-key <key>]",
+      "trading-cli bot register invite --invite-code <code> --bot-name <name> [--metadata-json <json>] [--metadata-file <file>] [--request-id <id>] [--idempotency-key <key>]",
+    ],
+  });
+}
+
+function emitRegisterPartnerUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "register partner",
+    usage: [
+      "trading-cli register partner --partner-key <key> --partner-secret <secret> --owner-email <email> --bot-name <name> [--metadata-json <json>] [--metadata-file <file>] [--request-id <id>] [--idempotency-key <key>]",
+      "trading-cli register partner --input <register-partner.json> [--request-id <id>] [--idempotency-key <key>]",
+      "trading-cli bot register partner --partner-key <key> --partner-secret <secret> --owner-email <email> --bot-name <name> [--metadata-json <json>] [--metadata-file <file>] [--request-id <id>] [--idempotency-key <key>]",
+    ],
+  });
+}
+
+function emitKeyRotateUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "key rotate",
+    usage: [
+      "trading-cli key rotate --bot-id <botId> [--reason <text>] [--request-id <id>] [--idempotency-key <key>]",
+      "trading-cli bot key rotate --bot-id <botId> [--reason <text>] [--request-id <id>] [--idempotency-key <key>]",
+    ],
+  });
+}
+
+function emitKeyRevokeUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "key revoke",
+    usage: [
+      "trading-cli key revoke --bot-id <botId> --key-id <keyId> [--reason <text>] [--request-id <id>] [--idempotency-key <key>]",
+      "trading-cli bot key revoke --bot-id <botId> --key-id <keyId> [--reason <text>] [--request-id <id>] [--idempotency-key <key>]",
+    ],
+  });
+}
+
+function emitBotListUsage(context: CommandContext): void {
+  context.emit({
+    status: "ok",
+    command: "bot list",
+    usage: ["trading-cli bot list [--request-id <id>]"],
+  });
+}
+
 async function runRegisterInviteCommand(args: string[], context: CommandContext): Promise<void> {
   const parsed = parseArgs({
     args,
     options: {
+      help: HELP_OPTION,
       input: { type: "string" },
       "invite-code": { type: "string" },
       "bot-name": { type: "string" },
@@ -157,6 +214,11 @@ async function runRegisterInviteCommand(args: string[], context: CommandContext)
     allowPositionals: false,
     strict: true,
   });
+
+  if (parsed.values.help) {
+    emitRegisterInviteUsage(context);
+    return;
+  }
 
   const payload = parseInviteRegistrationPayload(parsed.values);
   const requestId = deriveRequestId(
@@ -194,6 +256,7 @@ async function runRegisterPartnerCommand(args: string[], context: CommandContext
   const parsed = parseArgs({
     args,
     options: {
+      help: HELP_OPTION,
       input: { type: "string" },
       "partner-key": { type: "string" },
       "partner-secret": { type: "string" },
@@ -207,6 +270,11 @@ async function runRegisterPartnerCommand(args: string[], context: CommandContext
     allowPositionals: false,
     strict: true,
   });
+
+  if (parsed.values.help) {
+    emitRegisterPartnerUsage(context);
+    return;
+  }
 
   const payload = parsePartnerBootstrapPayload(parsed.values);
   const requestId = deriveRequestId(
@@ -244,6 +312,7 @@ async function runRotateKeyCommand(args: string[], context: CommandContext): Pro
   const parsed = parseArgs({
     args,
     options: {
+      help: HELP_OPTION,
       "bot-id": { type: "string" },
       reason: { type: "string" },
       "request-id": { type: "string" },
@@ -252,6 +321,11 @@ async function runRotateKeyCommand(args: string[], context: CommandContext): Pro
     allowPositionals: false,
     strict: true,
   });
+
+  if (parsed.values.help) {
+    emitKeyRotateUsage(context);
+    return;
+  }
 
   const botId = nonEmpty(parsed.values["bot-id"]);
   if (!botId) {
@@ -294,6 +368,7 @@ async function runRevokeKeyCommand(args: string[], context: CommandContext): Pro
   const parsed = parseArgs({
     args,
     options: {
+      help: HELP_OPTION,
       "bot-id": { type: "string" },
       "key-id": { type: "string" },
       reason: { type: "string" },
@@ -303,6 +378,11 @@ async function runRevokeKeyCommand(args: string[], context: CommandContext): Pro
     allowPositionals: false,
     strict: true,
   });
+
+  if (parsed.values.help) {
+    emitKeyRevokeUsage(context);
+    return;
+  }
 
   const botId = nonEmpty(parsed.values["bot-id"]);
   const keyId = nonEmpty(parsed.values["key-id"]);
@@ -347,11 +427,17 @@ async function runListBotsCommand(args: string[], context: CommandContext): Prom
   const parsed = parseArgs({
     args,
     options: {
+      help: HELP_OPTION,
       "request-id": { type: "string" },
     },
     allowPositionals: false,
     strict: true,
   });
+
+  if (parsed.values.help) {
+    emitBotListUsage(context);
+    return;
+  }
 
   const requestId = deriveRequestId(
     VALIDATION_BOT_REQUEST_ID_PREFIX,
@@ -417,14 +503,14 @@ function emitKeyUsage(context: CommandContext): void {
 
 export async function runValidationBotCommand(args: string[], context: CommandContext): Promise<void> {
   const root = args[0];
-  if (!root || root === "--help" || root === "-h") {
+  if (!root || isHelpFlag(root)) {
     emitUsage(context);
     return;
   }
 
   if (root === "register") {
     const mode = args[1];
-    if (mode === "--help" || mode === "-h") {
+    if (isHelpFlag(mode)) {
       emitRegisterUsage(context);
       return;
     }
@@ -444,7 +530,7 @@ export async function runValidationBotCommand(args: string[], context: CommandCo
 
   if (root === "key") {
     const action = args[1];
-    if (action === "--help" || action === "-h") {
+    if (isHelpFlag(action)) {
       emitKeyUsage(context);
       return;
     }
